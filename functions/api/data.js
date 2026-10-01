@@ -21,7 +21,7 @@ const SEED = {
       id: 'seed-tool', name: '工具效率', color: 6, links: [
         { id: 's1', name: 'GitHub', url: 'https://github.com', desc: '代码托管' },
         { id: 's2', name: '腾讯云', url: 'https://cloud.tencent.com', desc: '云服务控制台' },
-        { id: 's3', name: 'EdgeOne', url: 'https://console.cloud.tencent.com/edgeone/makers', desc: '本站的托管平台' },
+        { id: 's3', name: 'Cloudflare', url: 'https://dash.cloudflare.com', desc: '本站的托管平台' },
         { id: 's4', name: 'DeepL', url: 'https://www.deepl.com', desc: '翻译' }
       ]
     },
