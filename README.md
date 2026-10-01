@@ -1,6 +1,8 @@
 # 启航导航
 
-个人自用的网址导航起始页。纯静态三文件 + 两个 EdgeOne Pages 边缘函数，没有构建、没有依赖。
+个人自用的网址导航起始页。纯静态三文件 + 两个 Cloudflare Pages Functions，没有构建、没有依赖。
+
+**线上地址**：https://qihang-nav.pages.dev
 
 ## 组成
 
@@ -20,22 +22,36 @@
 node dev-server.mjs      # 打开 http://127.0.0.1:8788，默认口令 qihang
 ```
 
-`dev-server.mjs` 会把 KV 注入成全局变量 `NAV_KV`（**和线上 EdgeOne 的注入方式一致**），
-所以本地跑过的代码路径就是线上要跑的那条。数据落在 `data.local.json`，删掉即重置。
+`dev-server.mjs` 会把 KV 注入成全局变量 `NAV_KV`（模拟 EdgeOne 的注入方式），并同时保留
+`env.NAV_KV`（Cloudflare 的方式），所以两种运行时的代码路径本地都能跑到。
+数据落在 `data.local.json`，删掉即重置。
 
-## 部署到 EdgeOne Pages
+## 部署（Cloudflare Pages）
 
-1. 推送到 GitHub 仓库。
-2. EdgeOne 控制台 → Pages → 从 Git 仓库导入。
-3. 绑定 KV 命名空间，**变量名必须是 `NAV_KV`**。
-4. 配置环境变量 `NAV_PASSWORD`（访问口令）。
-5. 部署。
+已经配好了，日常只需要 `git push`，Cloudflare 会自动构建部署。
 
-之后每次 `git push` 都会自动重新构建部署。
+关键配置留档，重建项目时照填：
 
-## 两个容易踩的坑（已处理，改动时别踩回去）
+| 位置 | 项 | 值 |
+|---|---|---|
+| 构建设置 | 框架预设 | 无 |
+| 构建设置 | 构建命令 | `exit 0` |
+| 构建设置 | 构建输出目录 | `/` |
+| 变量和密钥 | `NAV_PASSWORD` | 访问口令 |
+| 绑定 | KV 命名空间，变量名 | `NAV_KV` |
+
+## 三个容易踩的坑（已处理，改动时别踩回去）
 
 1. **KV 的取法**：EdgeOne 把 KV 注入成**以绑定名为名字的全局变量**（`NAV_KV.get(...)`），
-   而不是 `env.NAV_KV`。代码里用 `kvOf(context)` 同时兼容全局注入与本地 env 注入。
-2. **函数目录必须是 `functions/`**，不是 `edge-functions/` 或 `node-functions/`
-   （以官方模板 `pages-containers`… 实测：官方 `functions-kv` / `functions-geolocation` 模板都用 `functions/`）。
+   Cloudflare 则走 `env.NAV_KV`。代码里用 `kvOf(context)` 兼容两者，别改成单一写法。
+2. **函数目录必须是 `functions/`**。官方 EdgeOne 模板实测用的是 `functions/`；
+   Cloudflare Pages 也是同一约定。不要改成 `edge-functions/` 或 `node-functions/`。
+3. **Cloudflare 新版控制台默认走 Workers 流程**，那条路不认 `functions/` 目录。
+   创建项目时要走「需要使用旧版 Pages 工作流？继续前往 Pages」那个入口。
+
+## 站点的运维小事
+
+- **图标抓不到怎么办**：部分站点（如 bilibili）会拦截机房 IP，图标会退回「识别色方块 + 首字」。
+  在编辑模式里给那个站点手动传一张图即可，手动图标优先级最高且不会被自动抓取覆盖。
+- **改口令**：Cloudflare 项目 → 设置 → 变量和密钥 → 改 `NAV_PASSWORD` → 重新部署。
+  本地 `.env` 里的也要同步改。

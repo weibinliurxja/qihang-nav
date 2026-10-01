@@ -97,3 +97,61 @@ KV 存储官方定义：「多边缘节点部署的 **KV 持久化数据存储**
 3. **国际站 vs 中国站**：中国站控制台 `console.cloud.tencent.com/edgeone/makers`；国际站 `console.tencentcloud.com/edgeone/makers`（定价页的注册入口指向国际站）。两条路径的实名要求可能不同，未核实。
 4. **带 Functions 的 Git 项目能否用密码保护**：页面措辞支持，但缺少明确操作文档。
 5. **未找到专为 EdgeOne Pages 写的开源导航项目**：需要从 Cloudflare Pages 形态的开源项目里选，再按官方迁移指南搬过来。
+
+---
+
+## 部署后的补充实测（2026-10-01，本节结论最硬）
+
+上面这些是查资料得出的。**真正部署上线之后，发现了一条文档里查不到、但决定性的限制。**
+
+### 站点部署成功了
+
+项目按 EdgeOne Pages 约定部署，构建与部署完全成功：
+
+```
+Found Functions directory at /functions. Uploading.
+✨ Compiled Worker successfully
+Success: Your site was deployed!
+```
+
+控制台缩略图也正确渲染出了我们的登录页。**所以卡住的不是代码，是访问入口。**
+
+### 但默认域名无法公开访问
+
+控制台分配的 `qihang-nav-0gcsb06x.edgeone.cool` 对**所有路径**（`/`、`/style.css`、`/app.js`）
+一律返回 401，且响应体是腾讯的 HTML 页而不是我们代码的 JSON：
+
+```
+HTTP/1.1 401 Authorization Required
+X-EOP-MSG: eo_time missing
+Server: edgeone makers
+```
+
+页面正文：`Access Restricted or Authentication Expired. Site Owner: Click "Preview" in the console for a new link.`
+
+即：默认域名要求**带签名的访问链接**（`eo_time` 参数），该链接由控制台「预览」按钮生成、**有效期 3 小时**。
+官方部署指南印证：「您可以通过『预览』按钮生成一个**有效期为三个小时**的访问链接」，
+并「**强烈建议您添加自定义域名**，以确保您的项目在长期访问中更具专业性和可信度」。
+
+社区实测进一步明确（[关于我折腾了一晚上 EdgeOne](https://2x.nz/posts/edgeone/)）：
+
+> 不管你的加速区域在哪，都建议绑定自己的域名，否则可能出现访问 401。含中国大陆的区域需要域名备案。
+
+试过的其他域名形态全部不可用：
+
+| 域名 | 结果 |
+|---|---|
+| `qihang-nav-0gcsb06x.edgeone.cool` | 401 `eo_time missing` |
+| `qihang-nav.edgeone.cool` | 404 |
+| `qihang-nav.edgeone.app` | 404 |
+| `qihang-nav-0gcsb06x.edgeone.app` | 404 |
+
+### 修正后的结论
+
+**EdgeOne Pages 免费版实际上要求使用者拥有自己的域名**，选「含中国大陆」加速还**必须完成 ICP 备案**。
+
+这直接推翻了本文档开头「免费额度对个人用不完」的乐观判断——额度是够的，
+但**免费的默认域名只能当 3 小时的临时预览用，不能当站点入口**。
+对「在 Mac / Windows / 安卓上随时打开的个人导航页」这个用途，等于不可用。
+
+最终因此迁到 Cloudflare Pages，详见 `docs/adr/0004-migrate-to-cloudflare-pages.md`。
