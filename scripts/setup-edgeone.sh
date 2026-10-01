@@ -226,7 +226,7 @@ pause "项目创建并跑完第一次构建后，按 Enter 继续"
 # ── 4 ─────────────────────────────────────────────────────────────────────
 stage "EdgeOne：开通 KV 并建命名空间"
 say "书签数据存在 KV 里，先要有 KV 账户和命名空间。"
-step "控制台左侧进「KV 存储」"
+open_url "https://console.cloud.tencent.com/edgeone/kv"
 step "若显示未开通，点「立即申请」开通（免费）"
 step "创建一个命名空间，例如 qihang-nav-data"
 note "免费额度：1 GB 账户容量、10 个命名空间，对个人导航页远远够用"
