@@ -244,8 +244,14 @@ pause "绑定好后按 Enter 继续"
 # ── 6 ─────────────────────────────────────────────────────────────────────
 stage "EdgeOne：设置访问口令"
 say "口令在边缘函数里做服务端校验，不写进任何代码。"
-NAV_PASSWORD="${NAV_PASSWORD:-$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 16)}"
-printf '  %s生成的口令：%s%s%s\n' "$BOLD" "$GREEN" "$NAV_PASSWORD" "$RESET"
+# 优先沿用 .env 里已有的口令：否则重跑向导会换一个新口令，
+# 而控制台里还是旧的，两边对不上，页面直接登不进去。
+_pw_saved=$(_existing NAV_PASSWORD || true)
+NAV_PASSWORD="${NAV_PASSWORD:-${_pw_saved:-$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 16)}}"
+printf '  %s口令：%s%s%s\n' "$BOLD" "$GREEN" "$NAV_PASSWORD" "$RESET"
+if [[ -n "$_pw_saved" && "$_pw_saved" == "$NAV_PASSWORD" ]]; then
+  note "（沿用 .env 里已有的口令，没有重新生成）"
+fi
 step "复制上面这串口令"
 step "项目 → 环境变量 → 新增"
 step "变量名填 NAV_PASSWORD，值粘贴这串口令"
