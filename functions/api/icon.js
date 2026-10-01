@@ -68,10 +68,28 @@ function safeEqual(a, b) {
   return diff === 0;
 }
 
-function authed(request, env) {
+/* ---------- 认证 ----------
+   图标接口曾经是公开的（因为 <img> 带不了自定义请求头），那等于把「书签清单里有哪些站点」
+   暴露给任何知道链接 id 的人。现在改成 Cookie 认证：Cookie 由 /api/data 在校验口令后种下，
+   <img> 请求会自动携带它。Cookie 里放的是口令的 SHA-256，不是明文口令。 */
+async function authToken(password) {
+  const bytes = new TextEncoder().encode('qihang-nav:' + password);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+function parseCookie(request, name) {
+  const raw = request.headers.get('cookie') || '';
+  const m = new RegExp('(?:^|;\\s*)' + name + '=([^;]+)').exec(raw);
+  return m ? m[1] : '';
+}
+
+async function authed(request, env) {
   const expect = env && env.NAV_PASSWORD;
   if (!expect) return false;
-  return safeEqual(request.headers.get('X-Password'), expect);
+  if (safeEqual(request.headers.get('X-Password'), expect)) return true;
+  return safeEqual(parseCookie(request, 'nav_auth'), await authToken(expect));
 }
 
 function json(body, status) {
@@ -179,7 +197,9 @@ async function grabIcon(siteUrl) {
 
 /* ---------- GET ---------- */
 export async function onRequestGet(context) {
-  const { request } = context;
+  const { request, env } = context;
+  if (!(await authed(request, env))) return json({ ok: false, error: 'unauthorized' }, 401);
+
   const id = new URL(request.url).searchParams.get('id');
   if (!id) return notFound();
 
@@ -220,7 +240,7 @@ export async function onRequestGet(context) {
 /* ---------- POST：手动上传 ---------- */
 export async function onRequestPost(context) {
   const { request, env } = context;
-  if (!authed(request, env)) return json({ ok: false, error: 'unauthorized' }, 401);
+  if (!(await authed(request, env))) return json({ ok: false, error: 'unauthorized' }, 401);
 
   const KV = kvOf(context);
   if (!KV) return json({ ok: false, error: 'KV 未绑定：请把 KV 命名空间绑定为 NAV_KV' }, 500);
@@ -247,7 +267,7 @@ export async function onRequestPost(context) {
 /* ---------- DELETE：改回自动抓取 ---------- */
 export async function onRequestDelete(context) {
   const { request, env } = context;
-  if (!authed(request, env)) return json({ ok: false, error: 'unauthorized' }, 401);
+  if (!(await authed(request, env))) return json({ ok: false, error: 'unauthorized' }, 401);
 
   const KV = kvOf(context);
   if (!KV) return json({ ok: false, error: 'KV 未绑定：请把 KV 命名空间绑定为 NAV_KV' }, 500);
