@@ -1,0 +1,5 @@
+{
+  "buildCommand": "echo \"静态站点：无构建步骤\"",
+  "outputDirectory": "./",
+  "nodeVersion": "22.11.0"
+}

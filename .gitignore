@@ -1,0 +1,7 @@
+# 本地开发用的数据文件，绝不提交（里面是真实书签数据）
+data.local.json
+
+# 依赖与工具产物
+node_modules/
+.edgeone/
+.DS_Store

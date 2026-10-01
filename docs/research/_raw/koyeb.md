@@ -1,0 +1,61 @@
+## Koyeb
+
+**一句话结论**：Koyeb 于 2026-02 宣布被 Mistral AI 收购，官方明确「Starter 计划即将移除、新用户必须订阅 Pro/Scale/Enterprise 并绑定有效付款方式」，因此对新用户而言 2026 年 10 月已没有可用的免费层（免费实例/免费 Postgres 仅对存量 Starter 组织保留）。
+
+- **免费额度（具体数字）**
+  - **免费 Web 实例（Free Instance，仅存量组织可用）**：0.1 vCPU、512MB RAM、2GB SSD；每个组织限 1 个；只能部署在 Frankfurt（fra）或 Washington, D.C.（was）；仅支持 Web Service（不能做 Worker）；不可自定义扩缩容；**不支持挂载卷**；无流量 1 小时后强制缩容到零（不可关闭、不可改）。官方定价页嵌入的实例配置将其描述为 "a special instance that does not bill"（`require_plan` 为空，`volumes_enabled: false`、`light_sleep_enabled: false`）。（来源：docs/reference/instances、pricing 页嵌入数据）
+  - **免费 Serverless Postgres**：free 规格 0.25 vCPU、1GB RAM、$0.00/hr、$0.00/mo（定价页显示 "Free 5h"）；**限制：每月 5 小时活跃计算时间、最大存储数据 1GB**，可用区域 Frankfurt / Washington, D.C. / Singapore；不活跃（sleeping）时暂停计费。（来源：docs/databases）
+  - **出站带宽**：每月 100GB 免费，超出部分 $0.04/GB（官方注明「目前尚未真正开始计费」，会在开始收费前提前通知）。（来源：docs/faqs/pricing）
+  - **自定义域名**：Pro 计划含 100 个免费自定义域名（定价页 FAQ 写「10 个免费、之后 $0.20/月」，两处官方文案不一致，以 Pro 的 100 个为准需谨慎）。
+  - 免费额度之外按秒计费；Pro $29/月（含 $10 compute）、Scale $299/月（含 $100 compute）、Enterprise 定制。
+- **持久化存储**
+  - 实例本地 SSD **是 ephemeral（临时）**：官方明确「写入本地文件系统的数据随时可能丢失」，实例被重新调度（至少每周一次的自动升级）时不迁移数据，建议改用数据库或对象存储。
+  - **Koyeb Volumes（块存储）**：public preview，仅 WAS 与 FRA 两个区域；容量 **1–10GB**；仅支持 scale=1；**不能挂载到 eco-\* 或 free 实例**；创建后不能解绑（除删除服务）；官方注明「无冗余、可能因单机故障丢数据，需自行用 Snapshots 备份，且当前只适合测试」。
+  - 结论：**免费实例没有任何持久化手段**（既不能用卷，本地盘又是临时的）；要持久化只能另配（免费的 Serverless Postgres，或外部数据库/对象存储）。
+- **数据存活（重启/休眠/不活跃）**
+  - 免费实例无流量 **1 小时后自动 scale-to-zero**，有请求时自动唤醒（冷启动）。
+  - sleepy 状态本身不保证本地盘数据存活：本地存储官方定义为 ephemeral，可能随时丢失；重调度/升级必然丢失。
+  - 免费 Postgres sleeping 时暂停计费，数据由数据库服务承载（但仍受 1GB 存储上限约束）。
+- **是否免费到永远**
+  - **否——对新用户已终止**。2023-10-27 官方博客曾承诺 "forever free tier"（永久免费层），但该文已被官方加上免责横幅「Koyeb 已被 Mistral AI 收购，部分信息可能不再反映平台现状」。
+  - 2026-02-17 官方博客明确：为准备并入 Mistral Compute，**"The Starter plan will soon be removed and new users will instead need to subscribe to the Pro, Scale, or Enterprise plan"**；FAQ 进一步写明「你必须使用有效付款方式并订阅一个付费计划才能开始」；「如果你已有组织在现有计划上，什么都不会变」。
+  - 2026-10-01 的定价页只列 Pro/Scale/Enterprise，**已完全不出现 Starter 计划**；定价页 FAQ 亦写「注册时选择的计划是 Pro」。故新用户无免费永久额度。
+  - 注意：文档站 FAQ 仍保留旧的「Is there a free tier? Each organization has access to: One free web Service … One free PostgreSQL database …」和「Is there a free tier? 可以随时降级到 Starter」等描述，与 2026-02 公告矛盾，判断为**文档未同步更新**；实际以公告与定价页为准。
+- **试用额度**：**没有通用试用金**。2022–2023 公测期的 $5.50/月免费 credit 已于 **2024-02-01 起从所有账户移除**（官方 FAQ 明确 "discontinued"）。仅存的 credit 项目：对早期创业公司的 **最高 $30,000 credits**（需申请/审核），以及对开源项目的免费 credit 赞助——均非注册即得的试用额度。
+- **是否需要信用卡**：**需要**。官方 FAQ：「Why does Koyeb require a credit card? We require a credit card to prevent fraud and abuse」，注册时做 **$29 预授权（pre-authorization hold）**并立即取消（依银行 7–21 天释放），随后**按所选计划（默认 Pro）按剩余天数比例实际扣款**；账户必须始终保留至少一张有效支付方式。收购公告也明确新用户「必须使用有效付款方式并订阅付费计划」。可接受 Visa/Mastercard/Amex/Diners/Discover/中国银联（China Union Pay）。（2023 年旧博客曾称「若自动反欺诈校验通过可免绑卡获得免费层」，该说法对当前新注册已失效。）
+- **数据存放地区**
+  - 核心区域：**FRA**（法兰克福）、**WAS**（华盛顿 D.C.）、**SIN**（新加坡）、**TYO**（东京）、**PAR**（巴黎）、**aws-us-east-1**（AWS 北弗吉尼亚）；预览区域：**SFO**（旧金山，仅付费计划可访问，需绑定付款方式）。
+  - **免费实例只能在 FRA 或 WAS**（不含新加坡/东京）。
+  - **Serverless Postgres**：Frankfurt、Washington D.C.、**Singapore**。
+  - **Volumes**：仅 WAS、FRA。
+  - Eco 实例类型（非免费）在 Washington D.C.、Frankfurt、**Singapore** 可用。
+  - 中国大陆无区域。
+- **中国大陆可达性**
+  - **本机实测（2026-10-01，非官方保证）**：`https://www.koyeb.com/` HTTP 200（DNS 0.003s、connect 0.399s、TTFB 0.878s、total 2.38s，解析到 Cloudflare IP 104.20.31.27）；`https://app.koyeb.com/` HTTP 200（TTFB 1.28s，解析到 34.76.79.153，属 Google Cloud）。此为单点、单次测试，不能代表大陆各地稳定性。
+  - **官方证据：无**。Koyeb 未对中国大陆可达性做任何官方承诺，也无大陆节点；**无可靠证据**表明其在大陆被墙或长期稳定，请勿据此推断延迟。
+- **部署形态**：Serverless 容器平台（microVM，基于 Cloud Hypervisor/裸金属）——支持从 Git 源码构建部署（Dockerfile / 各语言原生 buildpack）、预构建 Docker 镜像、任意容器 registry；服务类型含 Web Service 与 Worker；支持 autoscaling、scale-to-zero（含 Light Sleep 200ms 冷启动）、多区域部署、CLI/API/Terraform/Pulumi；2025-11 起新增 Sandboxes（AI agent 沙箱，public preview）。
+- **自定义域名与备案**：支持绑定自有域名并自动签发 SSL。自定义域名配额官方两处口径不一致（定价页 FAQ：10 个免费、之后 $0.20/月；文档 FAQ：Pro 计划 100 个免费、Scale 500 个）。**中国大陆备案（ICP）：Koyeb 无中国大陆区域，域名解析到境外主机通常不需要 ICP 备案**；官方文档未提及备案相关服务。
+- **2025–2026 近期变更**
+  - 2026-02-17/20：宣布与 Mistral AI 达成最终收购协议（2026-02-20 changelog 同步）；**Starter 计划将被移除，新用户只能订阅 Pro/Scale/Enterprise 且需有效付款方式**；Koyeb 持续运营并逐步并入 Mistral Compute。
+  - 2026-02-27：部署 healthy 时间缩短 50%；改进使用 scale-to-zero 的部署。
+  - 2026-01-16：新增 RTX Pro 6000、H200、B200 GPU；Sandboxes 生命周期/自动删除；Sandboxes JS SDK。
+  - 2025-12-12：账户支持 MFA 与 Passkey；**scale-to-zero 空闲期新增可选范围**（Pro 最长 6 小时、Scale/Enterprise 最长 12 小时；默认空闲期 5 分钟）。
+  - 2025-11-21：Sandboxes 进入 public preview。
+  - 2025-10-31：卷（Volumes）管理改进；一键部署目录 GA。
+  - 2025-09-19：Scale-to-Zero Light Sleep（冷启动最低 200ms）；TCP Proxy public preview。
+  - 2025-03-14（回顾）：Scale-to-Zero 开始适用于免费实例。
+- **对本需求的结论（中国大陆 / 无 VPS / 小型导航站 / 需持久化 / 只要免费）**：**不适用，建议排除 Koyeb**。理由：(1) 2026-02 官方已关闭新用户免费注册，新用户必须订阅 Pro（$29/月起）并绑定信用卡，与「只要免费」直接冲突；(2) 即便按存量组织的免费实例，也**不支持 Volumes、本地盘为 ephemeral**，无法满足「持久化」需求；(3) 免费实例仅 FRA/WAS，无亚太节点，大陆访问无官方保证；(4) 唯一的免费持久化是 Serverless Postgres，但每月仅 **5 小时活跃时间、1GB 存储**，无法支撑导航站 7×24 常驻；(5) 官方无大陆可达性承诺。若坚持用 Koyeb，只能接受付费 Pro（$29/月 + 超出 compute）并使用付费 Postgres/Volumes。
+- **置信度**：high
+- **来源（查证日期 2026-10-01）**
+  - https://www.koyeb.com/pricing — 抓取成功（web_fetch + curl）。定价页已无 Starter/免费计划；Pro $29/月含 $10 compute、Scale $299/月含 $100 compute；Serverless Postgres「Free 5h」$0/hr、0.25 vCPU、1GB RAM、1GB storage，区域 Washington D.C./Frankfurt/Singapore；GPU/Standard/Eco 实例价目；创业公司最高 $30k credits。
+  - https://www.koyeb.com/blog/koyeb-is-joining-mistral-ai-to-build-the-future-of-ai-infrastructure — 抓取成功（web_fetch）。2026-02-17 收购公告；「The Starter plan will soon be removed and new users will instead need to subscribe to the Pro, Scale, or Enterprise plan」；「You'll need a valid payment method and must subscribe to one of our paid plans to get started」；存量组织不受影响。
+  - https://www.koyeb.com/docs/faqs/pricing — 抓取成功（web_fetch + curl）。免费层描述（1 个免费 Web Service：512MB/0.1 vCPU/2GB，仅 FRA/WAS；1 个免费 PostgreSQL：5 小时活跃时间 + 1GB 存储）；出站带宽 100GB/月免费、超出 $0.04/GB；要求信用卡及 $29 预授权；$5.50 credit 已于 2024-02-01 移除；Starter 计划降级说明（与 2026-02 公告不一致，判断为未更新）。
+  - https://www.koyeb.com/docs/reference/instances — 抓取成功（curl 官方页面）。Free Instance：512MB RAM、0.1 vCPU、2GB SSD，每组织 1 个，仅 FRA/WAS，仅 Web Service，默认 1 小时缩容到零，不可用 Volumes；Standard/Eco/GPU 实例价目表。
+  - https://www.koyeb.com/docs/reference/volumes — 抓取成功（web_fetch + curl）。Volumes 为 public preview；仅 WAS/FRA；1–10GB；仅 scale=1；不能挂载到 eco-*/free 实例；存在停机与单机故障丢数据风险，需 Snapshots。
+  - https://www.koyeb.com/docs/reference/regions — 抓取成功（web_fetch + curl）。核心区域 FRA/WAS/SIN/TYO/PAR/aws-us-east-1，预览 SFO。
+  - https://www.koyeb.com/docs/run-and-scale/scale-to-zero — 抓取成功（web_fetch + curl）。默认空闲期 5 分钟；Pro 最长 6 小时、Scale/Enterprise 最长 12 小时；免费实例固定 1 小时且不可关闭/自定义。
+  - https://www.koyeb.com/docs/databases — 抓取成功（curl 官方页面）。免费 Postgres 实例 0.25 vCPU/1GB RAM/$0，限制每月 5 小时计算 + 1GB 存储；区域 Frankfurt/Washington D.C./Singapore；Small 及以上存储 $0.50/GB/月。
+  - https://www.koyeb.com/docs/reference/storage — 抓取成功（curl 官方页面）。本地 SSD 为 ephemeral，重调度不迁移数据，建议使用数据库/对象存储。
+  - https://www.koyeb.com/changelog — 抓取成功（web_fetch）。2025-03 至 2026-02 变更记录（free 实例启用 scale-to-zero、Light Sleep、Volumes 改进、Mistral 收购日程等）。
+  - https://www.koyeb.com/blog/sustaining-free-compute-in-a-hostile-environment — 抓取成功（web_fetch）。2023-10-27「forever free tier」承诺原文；页面顶部已被官方标注「收购后信息可能过时」。
+  - https://www.koyeb.com/docs、https://www.koyeb.com/docs/faqs/general、https://www.koyeb.com/docs/reference/accounts — 抓取成功，均为导航/通用信息，无新增免费额度数据。

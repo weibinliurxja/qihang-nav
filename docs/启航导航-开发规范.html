@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>启航导航 · 开发规范 v1.0</title>
+<style>
+  :root{
+    --bg:#F4F6FA; --surface:#FFFFFF; --ink:#0A1628; --ink-2:#46566E;
+    --ink-3:#5A6B85; --ink-4:#8A97AC; --line:#E6EBF3;
+    --brand:#014DB2; --brand-soft:#EAF1FF;
+    --radius-s:8px; --radius-m:12px; --radius-l:20px; --radius-xl:28px;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif;
+    font-size:14px; line-height:1.75; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:900px;margin:0 auto;padding:56px 32px 96px}
+
+  /* ---------- 页头 ---------- */
+  .doc-head{padding-bottom:28px;border-bottom:2px solid var(--ink)}
+  .kicker{font-size:12px;letter-spacing:.14em;color:var(--brand);font-weight:600;text-transform:uppercase}
+  h1{font-size:34px;font-weight:600;letter-spacing:-.01em;margin:10px 0 12px}
+  .sub{color:var(--ink-3);font-size:14px;max-width:640px}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
+  .meta span{
+    font-size:12px;color:var(--ink-2);background:#fff;border:1px solid var(--line);
+    padding:4px 11px;border-radius:999px;
+  }
+  .meta span b{color:var(--ink);font-weight:600}
+
+  /* ---------- 目录 ---------- */
+  nav.toc{display:flex;flex-wrap:wrap;gap:8px;margin:28px 0 8px}
+  nav.toc a{
+    font-size:12.5px;color:var(--ink-2);text-decoration:none;background:#fff;
+    border:1px solid var(--line);padding:5px 12px;border-radius:999px;
+  }
+  nav.toc a:hover{border-color:var(--brand);color:var(--brand)}
+
+  /* ---------- 章节 ---------- */
+  section{margin-top:54px;scroll-margin-top:24px}
+  h2{
+    font-size:20px;font-weight:600;display:flex;align-items:center;gap:10px;
+    padding-bottom:12px;border-bottom:1px solid var(--line);margin-bottom:22px;
+  }
+  h2::before{content:"";width:4px;height:18px;border-radius:2px;background:var(--brand);flex:none}
+  h3{font-size:15px;font-weight:600;margin:30px 0 12px;color:var(--ink)}
+  h3 .num{font-family:var(--mono);font-size:12px;color:var(--brand);margin-right:8px;font-weight:500}
+  p{margin:10px 0;color:var(--ink-2)}
+  p.note{font-size:13px;color:var(--ink-3)}
+  strong{color:var(--ink);font-weight:600}
+  code{font-family:var(--mono);font-size:12.5px;background:#EEF2F8;color:#1E3A5F;padding:1.5px 6px;border-radius:5px}
+
+  /* ---------- 表格 ---------- */
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px;background:#fff;
+    border:1px solid var(--line);border-radius:var(--radius-m);overflow:hidden}
+  th{background:#F8FAFD;text-align:left;font-weight:600;color:var(--ink);
+    padding:10px 14px;border-bottom:1px solid var(--line);font-size:12.5px;white-space:nowrap}
+  td{padding:10px 14px;border-bottom:1px solid #F1F4F9;color:var(--ink-2);vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  td.mono,th.mono{font-family:var(--mono);font-size:12px;color:var(--ink)}
+  .tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:5px;
+    background:var(--brand-soft);color:var(--brand);font-weight:600}
+
+  /* ---------- 色卡 ---------- */
+  .swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:14px 0}
+  .sw{background:#fff;border:1px solid var(--line);border-radius:var(--radius-m);overflow:hidden}
+  .sw .chip{height:52px}
+  .sw .txt{padding:9px 11px}
+  .sw .txt b{display:block;font-size:12.5px;font-weight:600;color:var(--ink)}
+  .sw .txt span{font-family:var(--mono);font-size:11px;color:var(--ink-4)}
+
+  /* ---------- 规则块 ---------- */
+  .rule{background:#fff;border:1px solid var(--line);border-left:3px solid var(--brand);
+    border-radius:0 var(--radius-m) var(--radius-m) 0;padding:14px 18px;margin:12px 0}
+  .rule .rid{font-family:var(--mono);font-size:11.5px;color:var(--brand);font-weight:600;letter-spacing:.06em}
+  .rule h4{font-size:13.5px;font-weight:600;margin:4px 0 6px}
+  .rule p{font-size:13px;margin:4px 0}
+  .rule.warn{border-left-color:#DC2626}
+  .rule.warn .rid{color:#DC2626}
+
+  /* ---------- 代码 ---------- */
+  pre{background:#0F1F3D;color:#D8E4F5;border-radius:var(--radius-m);
+    padding:16px 18px;overflow-x:auto;font-family:var(--mono);font-size:12.5px;line-height:1.7;margin:12px 0}
+  pre .c{color:#7E93B4}
+  pre .k{color:#8AB4FF}
+  pre .v{color:#FFC48A}
+  pre .s{color:#9BE8B8}
+
+  /* ---------- 玻璃演示 ---------- */
+  .demo{
+    position:relative;overflow:hidden;border-radius:var(--radius-l);padding:34px 26px;
+    margin:16px 0;display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-content:center;
+    background:linear-gradient(180deg,#EAF1FF 0%,#F1ECFF 38%,#FFEFF5 68%,#E9F6FF 100%);
+  }
+  .demo .blob{position:absolute;border-radius:50%;pointer-events:none}
+  .demo .b1{width:340px;height:340px;left:8%;top:-46%;
+    background:radial-gradient(circle,#4D8CFF61 0%,transparent 70%)}
+  .demo .b2{width:380px;height:380px;right:-6%;bottom:-56%;
+    background:radial-gradient(circle,#9E6BFA52 0%,transparent 70%)}
+  .demo .b3{width:320px;height:320px;left:34%;top:34%;
+    background:radial-gradient(circle,#FF6BAD42 0%,transparent 70%)}
+  .g-card{position:relative;width:150px;padding:14px;border-radius:20px;
+    background:rgba(255,255,255,.60);border:1px solid rgba(255,255,255,.90);
+    backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%);
+    box-shadow:inset 0 1px 2px rgba(255,255,255,.70),0 12px 32px rgba(10,22,40,.08)}
+  .g-card i{display:block;width:34px;height:34px;border-radius:9px;background:#00A1D6;margin-bottom:10px}
+  .g-card b{display:block;font-size:13px;font-weight:600;color:#0A1628}
+  .g-card span{font-size:11.5px;color:#33415A}
+  .g-panel{position:relative;width:100%;max-width:330px;padding:18px 22px;border-radius:28px;
+    background:rgba(255,255,255,.62);border:1px solid rgba(255,255,255,.92);
+    backdrop-filter:blur(40px) saturate(160%);-webkit-backdrop-filter:blur(40px) saturate(160%);
+    box-shadow:inset 0 1px 2px rgba(255,255,255,.75),0 16px 44px rgba(10,22,40,.10)}
+  .g-panel b{font-size:14px;font-weight:600;color:#0A1628}
+  .g-panel .fake-search{margin-top:12px;height:38px;border-radius:19px;background:rgba(255,255,255,.85);
+    border:1px solid rgba(10,22,40,.07);display:flex;align-items:center;
+    justify-content:space-between;padding:0 5px 0 16px;font-size:12px;color:#8A97AC}
+  .g-panel .fake-search u{width:70px;height:28px;border-radius:14px;background:#014DB2;
+    color:#fff;font-size:12px;text-decoration:none;display:flex;align-items:center;justify-content:center}
+  .caption{font-size:12px;color:var(--ink-4);text-align:center;margin-top:-6px}
+
+  /* ---------- 检查清单 ---------- */
+  ul.check{list-style:none;margin:12px 0}
+  ul.check li{position:relative;padding:7px 0 7px 28px;font-size:13px;color:var(--ink-2);border-bottom:1px solid #F1F4F9}
+  ul.check li::before{content:"☐";position:absolute;left:0;top:6px;color:var(--brand);font-size:14px}
+  ul.plain{list-style:none}
+  ul.plain li{padding:5px 0 5px 16px;position:relative;font-size:13px;color:var(--ink-2)}
+  ul.plain li::before{content:"";position:absolute;left:0;top:14px;width:5px;height:5px;border-radius:50%;background:var(--brand);opacity:.5}
+  .foot{margin-top:70px;padding-top:20px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-4);display:flex;justify-content:space-between}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="doc-head">
+    <div class="kicker">Development Spec</div>
+    <h1>启航导航 · 前端开发规范</h1>
+    <p class="sub">本文件是设计稿到代码的唯一依据。所有色值、尺寸、玻璃配方均取自当前画布实际节点，可直接落地，不需要再回看图。</p>
+    <div class="meta">
+      <span>版本 <b>v1.0</b></span>
+      <span>基准画布 <b>1440 × 可变高</b></span>
+      <span>内容区 <b>1200px</b></span>
+      <span>字体 <b>Noto Sans SC / Inter</b></span>
+      <span>视觉基调 <b>浅色磨砂玻璃</b></span>
+    </div>
+  </header>
+
+  <nav class="toc">
+    <a href="#s1">1 设计令牌</a>
+    <a href="#s2">2 玻璃实现规则</a>
+    <a href="#s3">3 布局规则</a>
+    <a href="#s4">4 组件规格</a>
+    <a href="#s5">5 图标规则</a>
+    <a href="#s6">6 交互状态</a>
+    <a href="#s7">7 响应式</a>
+    <a href="#s8">8 命名与工程组织</a>
+    <a href="#s9">9 验收清单</a>
+    <a href="#s10">10 已知坑</a>
+    <a href="#s11">11 设计稿侧规则</a>
+  </nav>
+
+  <!-- ================= 1 ================= -->
+  <section id="s1">
+    <h2>1 · 设计令牌</h2>
+    <p>令牌是唯一允许出现在代码里的硬编码值来源。<strong>禁止在组件里直接写十六进制色值或魔法数字</strong>，一律引用变量。</p>
+
+    <h3><span class="num">1.1</span>品牌与中性色</h3>
+    <div class="swatches">
+      <div class="sw"><div class="chip" style="background:#014DB2"></div><div class="txt"><b>品牌蓝</b><span>#014DB2</span></div></div>
+      <div class="sw"><div class="chip" style="background:#EAF1FF"></div><div class="txt"><b>品牌浅底</b><span>#EAF1FF</span></div></div>
+      <div class="sw"><div class="chip" style="background:#0A1628"></div><div class="txt"><b>主墨色</b><span>#0A1628</span></div></div>
+      <div class="sw"><div class="chip" style="background:#46566E"></div><div class="txt"><b>正文深</b><span>#46566E</span></div></div>
+      <div class="sw"><div class="chip" style="background:#33415A"></div><div class="txt"><b>正文</b><span>#33415A</span></div></div>
+      <div class="sw"><div class="chip" style="background:#5A6B85"></div><div class="txt"><b>次级</b><span>#5A6B85</span></div></div>
+      <div class="sw"><div class="chip" style="background:#8A97AC"></div><div class="txt"><b>弱化</b><span>#8A97AC</span></div></div>
+      <div class="sw"><div class="chip" style="background:#E6EBF3"></div><div class="txt"><b>分隔线</b><span>#E6EBF3</span></div></div>
+    </div>
+
+    <div class="rule">
+      <div class="rid">R-1.1</div>
+      <h4>颜色只用 8 个语义槽</h4>
+      <p>品牌蓝、主墨色、正文深、正文、次级、弱化、分隔线、白。新增颜色必须先在令牌表登记并说明用途，不允许"就这一处用一次"。</p>
+    </div>
+
+    <h3><span class="num">1.2</span>背景壁纸与光晕</h3>
+    <p>玻璃效果的成立前提是<strong>背后必须有可模糊的内容</strong>。页面底色不是纯白，是一层四段渐变加三团弥散光晕。</p>
+    <table>
+      <thead><tr><th>层</th><th class="mono">值</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td>底色渐变</td><td class="mono">180deg 四段<br>#EAF1FF 0%<br>#F1ECFF 38%<br>#FFEFF5 68%<br>#E9F6FF 100%</td><td>浅蓝 → 浅紫 → 浅粉 → 浅青，纵向。写在 <code>body</code> 上，<code>background-attachment: fixed</code>，不随滚动重绘</td></tr>
+        <tr><td>光晕 蓝</td><td class="mono">radial, 980×980<br>#4D8CFF @38%</td><td>定位 <code>left 8% / top -26%</code>，中心到透明 70%</td></tr>
+        <tr><td>光晕 紫</td><td class="mono">radial, 1100×1100<br>#9E6BFA @32%</td><td>定位 <code>right -6% / bottom -56%</code></td></tr>
+        <tr><td>光晕 粉</td><td class="mono">radial, 940×940<br>#FF6BAD @26%</td><td>定位 <code>left 34% / top 34%</code></td></tr>
+      </tbody>
+    </table>
+    <div class="rule">
+      <div class="rid">R-1.2</div>
+      <h4>光晕必须是 radial-gradient，不能用大半径 blur</h4>
+      <p>radial 自带柔和衰减，成本接近零；<code>filter: blur()</code> 做光晕会强行开一层离屏合成，移动端直接掉帧。</p>
+    </div>
+    <div class="rule">
+      <div class="rid">R-1.3</div>
+      <h4>光晕透明度是浅底专属值</h4>
+      <p>浅色底上低透明度光晕等于没画。这三个 @38% / @32% / @26% 是为浅底调过的，若哪天换深色底，必须重调而不是直接复用。</p>
+    </div>
+
+    <h3><span class="num">1.3</span>玻璃配方（本规范的核心）</h3>
+    <p>三档配方，按"面积 × 悬浮高度"选用。三档都遵循同一条结构：<strong>半透明填充 + 白色高光描边 + 背景模糊 + 顶部 1px 内阴影 + 大半径低透明投影</strong>。五个属性缺一个，玻璃就立不住。</p>
+    <table>
+      <thead><tr><th>档位</th><th class="mono">fill</th><th class="mono">border</th><th class="mono">blur</th><th class="mono">radius</th><th class="mono">投影</th><th class="mono">内高光</th></tr></thead>
+      <tbody>
+        <tr><td><span class="tag">卡片</span>站点卡 / 分类卡</td><td class="mono">#FFF 60%</td><td class="mono">#FFF 90% · 1px</td><td class="mono">24px</td><td class="mono">20px</td><td class="mono">0 12px 32px<br>#0A1628 8%</td><td class="mono">inset 0 1px 2px<br>#FFF 70%</td></tr>
+        <tr><td><span class="tag">面板</span>头部悬浮条</td><td class="mono">#FFF 62%</td><td class="mono">#FFF 92% · 1px</td><td class="mono">40px</td><td class="mono">28px</td><td class="mono">0 16px 44px<br>#0A1628 10%</td><td class="mono">inset 0 1px 2px<br>#FFF 75%</td></tr>
+        <tr><td><span class="tag">横条</span>页脚</td><td class="mono">#FFF 50%</td><td class="mono">#FFF 85% · 1px</td><td class="mono">40px</td><td class="mono">0</td><td class="mono">—</td><td class="mono">inset 0 1px 2px<br>#FFF 70%</td></tr>
+      </tbody>
+    </table>
+
+    <div class="demo">
+      <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+      <div class="g-panel">
+        <b>头部悬浮玻璃面板</b>
+        <div class="fake-search">输入网址或关键词<u>搜索</u></div>
+      </div>
+      <div class="g-card"><i></i><b>哔哩哔哩</b><span>弹幕视频社区</span></div>
+    </div>
+    <p class="caption">上图为本规范的真实 CSS 渲染结果（面板 40px blur / 卡片 24px blur）</p>
+
+    <div class="rule">
+      <div class="rid">R-1.4</div>
+      <h4>填充不透明度必须在 50%–65% 之间</h4>
+      <p>低于 50% 在浅底上玻璃会整个消失；高于 65% 就变成实心白块，模糊白做了。三档正好卡在这个区间。</p>
+    </div>
+    <div class="rule">
+      <div class="rid">R-1.5</div>
+      <h4>描边只能是白色高不透明度，不能改深色</h4>
+      <p>那圈 1px 白边是"玻璃边缘折射"的视觉代理。改成灰或深色，透明感当场消失，只剩一个毛边方块。</p>
+    </div>
+    <div class="rule">
+      <div class="rid">R-1.6</div>
+      <h4>投影必须用带蓝的黑，不能用纯黑</h4>
+      <p>统一用 <code>rgba(10,22,40,.08~.10)</code>（即 #0A1628 的透明度变体）。纯黑投影落在浅色渐变上会发脏，这是浅色化后最容易翻车的一处。</p>
+    </div>
+    <div class="rule warn">
+      <div class="rid">R-1.7</div>
+      <h4>禁止玻璃叠玻璃</h4>
+      <p>搜索框位于头部面板内部，<strong>它不再加 backdrop-filter</strong>。做法是不透明白 85% + <code>rgba(10,22,40,.07)</code> 细描边。嵌套的 backdrop-filter 既贵又容易在 Safari 上出渲染错误，用不透明填充 + 描边把层级区分出来即可。</p>
+    </div>
+
+    <h3><span class="num">1.4</span>文字色阶（五级）</h3>
+    <table>
+      <thead><tr><th>级别</th><th class="mono">色值</th><th>用在哪</th></tr></thead>
+      <tbody>
+        <tr><td>L1 标题</td><td class="mono">#0A1628</td><td>页标题、区块标题、站点名、分类名、Logo 文字、导航当前项</td></tr>
+        <tr><td>L2 正文深</td><td class="mono">#46566E</td><td>主导航非当前项、工具条文字</td></tr>
+        <tr><td>L3 正文</td><td class="mono">#33415A</td><td>站点链接名、热搜词、站点描述、"更多"</td></tr>
+        <tr><td>L4 次级</td><td class="mono">#5A6B85</td><td>区块副标题、友链、页脚链接、占位提示</td></tr>
+        <tr><td>L5 弱化</td><td class="mono">#8A97AC</td><td>箭头、图标描边、版权、极次要文字</td></tr>
+      </tbody>
+    </table>
+    <div class="rule warn">
+      <div class="rid">R-1.8</div>
+      <h4>玻璃上不允许出现 L1 以外的深色文字用白字</h4>
+      <p>浅色玻璃上写白字 = 文字消失。改色或加模块时，先问"这块玻璃上的文字属于哪一级"，不要沿用深色版的白色。</p>
+    </div>
+
+    <h3><span class="num">1.5</span>圆角 / 间距 / 尺寸阶梯</h3>
+    <table>
+      <thead><tr><th>类别</th><th class="mono">阶梯</th><th>用途</th></tr></thead>
+      <tbody>
+        <tr><td>圆角</td><td class="mono">2 / 6 / 10 / 20 / 26 / 28 / 9999</td><td>2 标题色块 · 6 站点标识（22px 小方块）· 10 热门卡站点标识（40px）· 20 卡片 · 26 搜索框 · 28 头部面板 · 9999 胶囊</td></tr>
+        <tr><td>间距</td><td class="mono">6 / 8 / 10 / 12 / 16 / 18 / 36</td><td>12 网格间隙（卡与卡）· 10 链接行间隙 · 16 区块内竖向 · 18 页脚行距 · 36 区块上下留白</td></tr>
+        <tr><td>页面边距</td><td class="mono">120px</td><td>所有区块左右一律 120，内容区恒为 1200</td></tr>
+        <tr><td>行高</td><td class="mono">1.75 / 1.4</td><td>正文 1.75，紧凑卡片内文字 1.4</td></tr>
+      </tbody>
+    </table>
+    <div class="rule">
+      <div class="rid">R-1.9</div>
+      <h4>间距只能取自阶梯，且默认用 12</h4>
+      <p>网格间隙、卡片内元素间隙一律 12 起步。<strong>不允许出现 13 / 15 / 22 这类凑数值</strong>——上一版分类卡就是因为中英混排多出的 14px 才出现高度不齐。</p>
+    </div>
+
+    <h3><span class="num">1.6</span>字体与字阶</h3>
+    <p>中文 <code>Noto Sans SC</code>（Regular 400 / Medium 500 / SemiBold 600），数字与拉丁 <code>Inter</code>。回退链：<code>-apple-system, "PingFang SC", "Microsoft YaHei"</code>。</p>
+    <table>
+      <thead><tr><th class="mono">字号</th><th class="mono">字重</th><th>用途</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">20</td><td class="mono">600</td><td>站点名（Logo 文字）</td></tr>
+        <tr><td class="mono">18</td><td class="mono">600</td><td>区块标题（热门推荐 / 分类导航）</td></tr>
+        <tr><td class="mono">15</td><td class="mono">600</td><td>分类卡标题</td></tr>
+        <tr><td class="mono">14</td><td class="mono">600</td><td>站点卡片站点名、主导航项、搜索按钮</td></tr>
+        <tr><td class="mono">14</td><td class="mono">500</td><td>次级导航项、工具条强调项</td></tr>
+        <tr><td class="mono">13</td><td class="mono">400 / 600</td><td>站点链接名 400 · 注册按钮 600 · 搜索类型 500</td></tr>
+        <tr><td class="mono">12</td><td class="mono">400</td><td>热搜词、站点描述、副标题、页脚、版权</td></tr>
+      </tbody>
+    </table>
+
+    <h3><span class="num">1.7</span>分类识别色（固定 8 色）</h3>
+    <p>每个分类一个识别色，同时作用于<strong>分类标题色块</strong>和<strong>该分类下 6 个站点标识的底色</strong>。这是全页唯一的饱和色层，浅底上靠它撑住层次，<strong>任何改版都不许动</strong>。</p>
+    <div class="swatches">
+      <div class="sw"><div class="chip" style="background:#2563EB"></div><div class="txt"><b>新闻资讯</b><span>#2563EB</span></div></div>
+      <div class="sw"><div class="chip" style="background:#F97316"></div><div class="txt"><b>视频娱乐</b><span>#F97316</span></div></div>
+      <div class="sw"><div class="chip" style="background:#EC4899"></div><div class="txt"><b>购物电商</b><span>#EC4899</span></div></div>
+      <div class="sw"><div class="chip" style="background:#8B5CF6"></div><div class="txt"><b>社交通讯</b><span>#8B5CF6</span></div></div>
+      <div class="sw"><div class="chip" style="background:#DC2626"></div><div class="txt"><b>财经股票</b><span>#DC2626</span></div></div>
+      <div class="sw"><div class="chip" style="background:#0EA5E9"></div><div class="txt"><b>工具效率</b><span>#0EA5E9</span></div></div>
+      <div class="sw"><div class="chip" style="background:#0D9488"></div><div class="txt"><b>学习阅读</b><span>#0D9488</span></div></div>
+      <div class="sw"><div class="chip" style="background:#16A34A"></div><div class="txt"><b>生活服务</b><span>#16A34A</span></div></div>
+    </div>
+    <div class="rule">
+      <div class="rid">R-1.10</div>
+      <h4>识别色只用于色块，不用于文字</h4>
+      <p>这 8 个色在白底上的对比度不都能过 AA。<strong>一律作为方块底色 + 白色首字</strong>使用，不要拿来染标题文字。</p>
+    </div>
+    <div class="rule">
+      <div class="rid">R-1.11</div>
+      <h4>区块装饰色块统一 #014DB2，不跟随分类色</h4>
+      <p>「热门推荐」「分类导航」两个区块标题前的 4×18 色块是品牌蓝，固定值，和分类识别色是两套体系，别混用。</p>
+    </div>
+  </section>
+
+  <!-- ================= 2 ================= -->
+  <section id="s2">
+    <h2>2 · 玻璃实现规则</h2>
+
+    <h3><span class="num">2.1</span>标准写法</h3>
+    <pre><span class="c">/* 卡片档：站点卡 / 分类卡 */</span>
+.glass-card {
+  <span class="k">background</span>: <span class="v">rgba(255,255,255,.60)</span>;
+  <span class="k">border</span>: <span class="v">1px solid rgba(255,255,255,.90)</span>;
+  <span class="k">border-radius</span>: <span class="v">20px</span>;
+  <span class="k">backdrop-filter</span>: <span class="v">blur(24px) saturate(160%)</span>;
+  <span class="k">-webkit-backdrop-filter</span>: <span class="v">blur(24px) saturate(160%)</span>;
+  <span class="k">box-shadow</span>:
+    inset 0 1px 2px rgba(255,255,255,.70),
+    0 12px 32px rgba(10,22,40,.08);
+}</pre>
+
+    <div class="rule">
+      <div class="rid">R-2.1</div>
+      <h4>saturate 必须加</h4>
+      <p>画布上的 <code>BACKGROUND_BLUR</code> 只表达"模糊半径"，浏览器里对应 <code>blur(Npx)</code>，1:1 映射。但<strong>真实玻璃还有一层色彩提纯</strong>，靠 <code>saturate(160%)</code> 补。只用 blur 会得到一个灰蒙蒙的毛边块，不是玻璃。</p>
+    </div>
+    <div class="rule">
+      <div class="rid">R-2.2</div>
+      <h4>内阴影写进 box-shadow，别用伪元素</h4>
+      <p><code>inset 0 1px 2px rgba(255,255,255,.7)</code> 就是画布上那条顶部高光边。用 <code>::before</code> 叠一层会破坏 <code>backdrop-filter</code> 的合成层，出现边缘断裂。</p>
+    </div>
+    <div class="rule">
+      <div class="rid">R-2.3</div>
+      <h4>backdrop-filter 元素总数上限 12</h4>
+      <p>当前页共 16 个玻璃容器（1 面板 + 6 热门卡 + 8 分类卡 + 1 页脚），已经是上限。再加玻璃元素必须先合并或降级，否则中低端设备滚动会明显掉帧。</p>
+    </div>
+    <div class="rule">
+      <div class="rid">R-2.4</div>
+      <h4>降级：不支持 backdrop-filter 时退成不透明白</h4>
+      <pre><span class="c">/* 渐进增强，不支持时是不透明白卡，不是透明色块 */</span>
+@supports (<span class="k">backdrop-filter</span>: blur(1px)) {
+  .glass-card { background: rgba(255,255,255,.60); backdrop-filter: blur(24px) saturate(160%); }
+}</pre>
+      <p class="note">默认样式写 <code>rgba(255,255,255,.92)</code>，支持时再覆盖成 .60。绝不能让它降级成"半透明但没模糊"——那是全页最丑的状态。</p>
+    </div>
+    <div class="rule">
+      <div class="rid">R-2.5</div>
+      <h4>光晕层不可滚动、不接收事件</h4>
+      <p>三个光晕用 <code>position: fixed; pointer-events: none; z-index: 0</code>，内容层 <code>z-index: 1</code>。如果光晕跟着页面滚，玻璃的模糊结果会持续变化，滚动时整页像在抖。</p>
+    </div>
+  </section>
+
+  <!-- ================= 3 ================= -->
+  <section id="s3">
+    <h2>3 · 布局规则</h2>
+    <table>
+      <thead><tr><th>区块</th><th class="mono">高度</th><th class="mono">内边距</th><th class="mono">网格</th></tr></thead>
+      <tbody>
+        <tr><td>顶部工具条</td><td class="mono">34</td><td class="mono">左右 120</td><td>两端对齐，高 34，透明底</td></tr>
+        <tr><td>头部搜索区（外层）</td><td class="mono">244</td><td class="mono">16 / 24</td><td>外层只负责让面板内缩 24px</td></tr>
+        <tr><td>头部悬浮面板（内层）</td><td class="mono">212</td><td class="mono">16 / 96</td><td>高 60 的品牌行 + 自适应搜索区</td></tr>
+        <tr><td>热门推荐区</td><td class="mono">自适应</td><td class="mono">36 / 120</td><td>6 列 · 卡 190 · 间隙 12</td></tr>
+        <tr><td>分类导航区</td><td class="mono">自适应</td><td class="mono">32 / 120</td><td>4 列 · 卡 291 · 间隙 12</td></tr>
+        <tr><td>页脚</td><td class="mono">自适应</td><td class="mono">28 / 120</td><td>单列 · 行距 18</td></tr>
+      </tbody>
+    </table>
+    <div class="rule">
+      <div class="rid">R-3.1</div>
+      <h4>宽度全部由栅格算出来，不写死</h4>
+      <p>内容区 1200；热门卡 <code>calc((1200 - 5×12) / 6) = 190</code>；分类卡 <code>calc((1200 - 3×12) / 4) = 291</code>。<strong>卡片宽度用 grid 的 <code>1fr</code>，不要写 190px/291px 固定值</strong>，否则窄屏直接溢出。</p>
+    </div>
+    <div class="rule">
+      <div class="rid">R-3.2</div>
+      <h4>头部面板的内缩必须补偿</h4>
+      <p>外层左右内边距 24 + 内层左右内边距 96 = 120，正好等于其他区块的页面边距。改任何一边，内层的 Logo 和搜索框就会和下方网格错位。<strong>这两个数字是联动的</strong>。</p>
+    </div>
+    <div class="rule">
+      <div class="rid">R-3.3</div>
+      <h4>分类卡内链接列表固定 2 列</h4>
+      <p>卡内可用宽 259（291 − 16×2），链接项 124 × 2 + 间隙 10 = 258。链接名长度必须能塞进 124px——<strong>超过 5 个汉字要么缩字号要么截断加省略号</strong>，不允许撑开卡片。</p>
+    </div>
+    <div class="rule">
+      <div class="rid">R-3.4</div>
+      <h4>同行卡片高度必须一致</h4>
+      <p>用 <code>align-items: stretch</code>，不在卡上写固定高度。上一版就是中英混排导致「生活服务」卡矮了 14px，靠写死高度才对齐的——<strong>正确做法是让网格拉伸</strong>。</p>
+    </div>
+  </section>
+
+  <!-- ================= 4 ================= -->
+  <section id="s4">
+    <h2>4 · 组件规格</h2>
+
+    <h3><span class="num">4.1</span>顶部工具条</h3>
+    <p>高 34，透明底，两端对齐。左组：设为首页 / 手机版 / 加入收藏 / 意见反馈，12px L4，间距 20。右组：简体中文 / 1×12 分隔线 / 登录（品牌蓝 Medium）/ 注册，间距 16。</p>
+    <div class="rule">
+      <div class="rid">R-4.1</div>
+      <h4>工具条不能有背景色</h4>
+      <p>深色版它是 #0F1F3D 实心条，浅色版已去掉填充。<strong>加了底就和上方壁纸割裂</strong>，玻璃的整页感就断了。</p>
+    </div>
+
+    <h3><span class="num">4.2</span>头部悬浮面板</h3>
+    <p>高 212、圆角 28、玻璃「面板档」，内边距上下 16 左右 96。内含：品牌行（高 60）+ 搜索区（自适应）。</p>
+    <ul class="plain">
+      <li><b>Logo</b>：34×34 圆角 10 蓝色渐变方块（#4D8CFF → #0556B2，180deg）+ 内嵌 20×20 白色四角星；右侧「启航导航」20px/600 #0A1628，间距 10</li>
+      <li><b>主导航</b>：7 项，14px，间距 26。当前项品牌蓝 600，其余 #46566E Medium</li>
+      <li><b>账户区</b>：登录 13px #46566E + 注册按钮（胶囊，白底、13px/600 #014DB2、内边距 7×16）</li>
+    </ul>
+
+    <h3><span class="num">4.3</span>搜索框</h3>
+    <table>
+      <thead><tr><th>属性</th><th class="mono">值</th></tr></thead>
+      <tbody>
+        <tr><td>尺寸</td><td class="mono">660 × 52 · 圆角 26</td></tr>
+        <tr><td>填充</td><td class="mono">rgba(255,255,255,.85) —— 注意：不是玻璃档，见 R-1.7</td></tr>
+        <tr><td>描边</td><td class="mono">1px rgba(10,22,40,.07)</td></tr>
+        <tr><td>内边距</td><td class="mono">左 22 / 右 6</td></tr>
+        <tr><td>左侧</td><td class="mono">「全网」13px/500 #014DB2 + 下拉箭头 14×14 + 1×18 分隔线 + 占位文字 13px #8A97AC</td></tr>
+        <tr><td>按钮</td><td class="mono">100 × 40 · 圆角 20 · #014DB2 · 白字 14/600 · 图标 15×15 前置 · 间距 6</td></tr>
+        <tr><td>按钮投影</td><td class="mono">0 6px 16px rgba(1,77,178,.30)</td></tr>
+      </tbody>
+    </table>
+    <div class="rule">
+      <div class="rid">R-4.2</div>
+      <h4>搜索按钮的彩色投影是刻意的</h4>
+      <p>用品牌蓝自身做投影（@30%），让按钮从玻璃面板里"顶"出来。这是全页唯一一处彩色投影，别推广到其他地方。</p>
+    </div>
+
+    <h3><span class="num">4.4</span>热搜胶囊</h3>
+    <p>左侧标签「热门搜索」12px L4，胶囊：12px #33415A、内边距 12×5、圆角 9999、填充白 55%、描边白 90%、间距 10。</p>
+    <div class="rule warn">
+      <div class="rid">R-4.3</div>
+      <h4>胶囊必须带描边</h4>
+      <p>胶囊坐在头部面板（白 62%）上，只靠填充区分不出来。<strong>那圈白 90% 的描边是它唯一的边界</strong>，去掉就糊成一片。</p>
+    </div>
+
+    <h3><span class="num">4.5</span>区块标题行</h3>
+    <p>左组：4×18 圆角 2 品牌蓝色块 + 标题（18px/600 #0A1628）+ 副标题（12px #5A6B85），间距 10。右侧可选动作（如「换一批」：14×14 刷新图标 + 12px L4 文字，间距 6）。</p>
+    <div class="rule">
+      <div class="rid">R-4.4</div>
+      <h4>标题行一律左对齐</h4>
+      <p>标题组是单子节点的 hug 容器，父级若设 <code>SPACE_BETWEEN</code> 会把它顶到中间。<strong>父级用 <code>flex-start</code></strong>，右侧动作靠 <code>margin-left: auto</code> 推过去。</p>
+    </div>
+
+    <h3><span class="num">4.6</span>热门站点卡</h3>
+    <p>190 宽（网格自适应）、最小高 125、内边距 14、圆角 20、玻璃「卡片档」。结构：站点标识 40×40 圆角 10（品牌色底 + 16px 白色首字）→ 站点名 14/600 L1 → 描述 12/400 L3，竖向间距 10。右上角 14×14 外链箭头，绝对定位 <code>top 14 / right 14</code>，描边 L5。</p>
+    <div class="rule">
+      <div class="rid">R-4.5</div>
+      <h4>6 张热门卡不做同高</h4>
+      <p>热门卡是自由内容卡，高度由文案行数决定，网格用 <code>align-items: start</code>。<strong>不要为了对齐把描述截断</strong>——观感和信息完整度都输给那几像素的齐整。</p>
+    </div>
+
+    <h3><span class="num">4.7</span>分类卡</h3>
+    <p>291 宽、高 166、内边距 16、圆角 20、玻璃「卡片档」。结构：标题行（4×16 分类色块 + 分类名 15/600 L1 + 右侧「更多」+ 12×12 箭头）→ 链接列表（wrap，2 列，间隙 10）。</p>
+    <p>链接项宽 124，高自适应：22×22 圆角 6 分类色方块（11px 白色首字）+ 13px L3 链接名，间距 7。<strong>分类卡高度由内容撑，网格拉伸对齐。</strong></p>
+
+    <h3><span class="num">4.8</span>页脚</h3>
+    <p>全宽玻璃「横条」档：填充白 50%、描边白 85%、模糊 40、无圆角，内边距 28/120、行距 18。内容三层：友情链接行（标签 12px #5A6B85 + 6 条友链 12px #46566E，间距 18）→ 1px 分隔线 <code>rgba(10,22,40,.10)</code> → 底部行（左：5 条帮助链接 12px #46566E 间距 20；右：版权 12px #5A6B85）。</p>
+    <div class="rule">
+      <div class="rid">R-4.6</div>
+      <h4>页脚全宽不设圆角</h4>
+      <p>它压在页面底部边缘，圆角反而会露出底下的壁纸。保留四边描边是画布上的选择，Web 上建议只留顶边 1px 白 85%。</p>
+    </div>
+  </section>
+
+  <!-- ================= 5 ================= -->
+  <section id="s5">
+    <h2>5 · 图标规则</h2>
+    <table>
+      <thead><tr><th>图标</th><th class="mono">尺寸</th><th class="mono">描边</th><th class="mono">颜色</th></tr></thead>
+      <tbody>
+        <tr><td>Logo 四角星</td><td class="mono">20 × 20</td><td class="mono">实心</td><td class="mono">#FFFFFF</td></tr>
+        <tr><td>搜索</td><td class="mono">15 × 15</td><td class="mono">1.6</td><td class="mono">#FFFFFF</td></tr>
+        <tr><td>下拉 / 外链 / 更多箭头</td><td class="mono">14 / 14 / 12</td><td class="mono">1.6 / 1.6 / 1.5</td><td class="mono">#8A97AC</td></tr>
+        <tr><td>刷新（换一批）</td><td class="mono">14 × 14</td><td class="mono">1.4</td><td class="mono">#8A97AC</td></tr>
+      </tbody>
+    </table>
+    <div class="rule">
+      <div class="rid">R-5.1</div>
+      <h4>全部内联 SVG，禁止图标字体</h4>
+      <p>描边类图标统一 <code>stroke-linecap/linejoin: round</code>，<code>fill: none</code>，<code>currentColor</code> 取色。<strong>不允许用 emoji 或字符（→ ↗ ×）凑数</strong>——不同系统下字形和基线全不一致。</p>
+    </div>
+    <div class="rule">
+      <div class="rid">R-5.2</div>
+      <h4>站点标识是"色块 + 首字"，不是 favicon</h4>
+      <p>拿不到真实 favicon 时的正式方案：分类识别色圆角方块 + 白色首字（热门卡 16px/600，分类卡 11px/600）。<strong>不要改成灰色占位框，也不要外链第三方图标服务</strong>（会引入请求依赖和隐私问题）。</p>
+    </div>
+  </section>
+
+  <!-- ================= 6 ================= -->
+  <section id="s6">
+    <h2>6 · 交互状态</h2>
+    <table>
+      <thead><tr><th>元素</th><th>默认</th><th>Hover</th><th>Active / Focus</th></tr></thead>
+      <tbody>
+        <tr><td>站点卡 / 分类卡</td><td>白 60% · 描边白 90%</td><td>白 72% · 描边白 100% · <code>translateY(-4px)</code> · 投影升到 <code>0 20px 44px rgba(10,22,40,.12)</code></td><td>回落到 <code>translateY(-1px)</code></td></tr>
+        <tr><td>站点链接项</td><td>无底</td><td>填充 <code>rgba(255,255,255,.55)</code> · 圆角 8 · 左右内扩 6px 抵消</td><td>—</td></tr>
+        <tr><td>搜索按钮</td><td>#014DB2</td><td>#0A5CD1</td><td>#01408F</td></tr>
+        <tr><td>热搜胶囊</td><td>白 55%</td><td>白 80%</td><td>—</td></tr>
+        <tr><td>导航项</td><td>#46566E</td><td>#014DB2</td><td>—</td></tr>
+      </tbody>
+    </table>
+    <div class="rule">
+      <div class="rid">R-6.1</div>
+      <h4>过渡统一 160ms / cubic-bezier(.2,.8,.3,1)</h4>
+      <p>只过渡 <code>transform / background / border-color / box-shadow</code>。<strong>不要对 <code>backdrop-filter</code> 做过渡</strong>，浏览器每帧重算整块模糊，直接卡死。</p>
+    </div>
+    <div class="rule">
+      <div class="rid">R-6.2</div>
+      <h4>键盘可达性</h4>
+      <p>所有链接和按钮必须是真 <code>&lt;a&gt;</code> / <code>&lt;button&gt;</code>；焦点态用 <code>outline: 2px solid #014DB2; outline-offset: 2px</code>，<strong>不允许 <code>outline: none</code></strong>。玻璃卡片的 hover 上浮必须能通过 <code>:focus-visible</code> 同样触发。</p>
+    </div>
+  </section>
+
+  <!-- ================= 7 ================= -->
+  <section id="s7">
+    <h2>7 · 响应式规则</h2>
+    <table>
+      <thead><tr><th class="mono">断点</th><th class="mono">内容宽</th><th class="mono">热门卡</th><th class="mono">分类卡</th><th>其他</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">≥ 1440</td><td class="mono">1200</td><td class="mono">6 列</td><td class="mono">4 列</td><td>基准形态</td></tr>
+        <tr><td class="mono">1024–1439</td><td class="mono">自适应</td><td class="mono">4 列</td><td class="mono">3 列</td><td>页面边距降到 64</td></tr>
+        <tr><td class="mono">768–1023</td><td class="mono">自适应</td><td class="mono">3 列</td><td class="mono">2 列</td><td>边距 40，搜索框宽度 100%</td></tr>
+        <tr><td class="mono">&lt; 768</td><td class="mono">自适应</td><td class="mono">2 列</td><td class="mono">1 列</td><td>边距 20，顶部导航折叠成菜单</td></tr>
+      </tbody>
+    </table>
+    <div class="rule">
+      <div class="rid">R-7.1</div>
+      <h4>窄屏必须降玻璃开销</h4>
+      <p><code>@media (max-width: 1023px)</code> 下把卡片 blur 从 24 降到 16、页脚 blur 从 40 降到 24。移动端 GPU 撑不住 16 个 40px 模糊层。</p>
+    </div>
+    <div class="rule">
+      <div class="rid">R-7.2</div>
+      <h4>移动端搜索框置顶吸附</h4>
+      <p>&lt; 768 时搜索框脱离头部面板，<code>position: sticky; top: 0</code>，此时它可以恢复自己的一层玻璃（因为已经不在面板内部了，不违反 R-1.7）。</p>
+    </div>
+  </section>
+
+  <!-- ================= 8 ================= -->
+  <section id="s8">
+    <h2>8 · 命名与工程组织</h2>
+    <p>CSS 变量名与令牌一一对应，不允许出现未登记的变量：</p>
+    <pre><span class="c">/* 颜色 */</span> --color-brand / --color-ink / --color-ink-2 / --color-ink-3 / --color-ink-4 / --color-line
+<span class="c">/* 分类识别色 */</span> --cat-news / --cat-video / --cat-shop / --cat-social / --cat-finance / --cat-tool / --cat-read / --cat-life
+<span class="c">/* 玻璃 */</span> --glass-card-* / --glass-panel-* / --glass-bar-*（fill / border / blur / shadow 各一条）
+<span class="c">/* 尺寸 */</span> --radius-s:6 · --radius-m:10 · --radius-l:20 · --radius-xl:28 · --space-* · --page-x:120</pre>
+    <p>类名用「区块 + 元素」两段式，不用 BEM 的 <code>__</code>：<code>.topbar</code> <code>.hero</code> <code>.hero-panel</code> <code>.search-box</code> <code>.search-btn</code> <code>.chip</code> <code>.card</code> <code>.card-cat</code> <code>.site-link</code> <code>.block-head</code> <code>.footer</code>。</p>
+    <div class="rule">
+      <div class="rid">R-8.1</div>
+      <h4>站点数据必须走配置，不写死在模板里</h4>
+      <p>48 个站点 + 分类 + 识别色是一份 JSON：<code>{ category, color, sites: [{ name, desc, url }] }</code>。分类色由数据里带出来，<strong>不要在第 5 个分类卡上写第 5 个颜色</strong>——上一版 8 个分类卡就是 8 组独立图层，改一次要动 8 处。</p>
+    </div>
+    <div class="rule">
+      <div class="rid">R-8.2</div>
+      <h4>玻璃卡片必须是同一个组件</h4>
+      <p>热门卡和分类卡共用 <code>.glass-card</code> 基类，只覆盖内边距和网格跨度。禁止复制样式块。</p>
+    </div>
+  </section>
+
+  <!-- ================= 9 ================= -->
+  <section id="s9">
+    <h2>9 · 验收清单</h2>
+    <ul class="check">
+      <li>1440 宽下内容区正好 1200，左右边距 120，无横向滚动条</li>
+      <li>头部面板内缩后，Logo 左边缘与下方卡片左边缘严格对齐（同一条 120 竖线）</li>
+      <li>玻璃卡片：能看到底下的渐变与光晕，且卡片边界靠白描边可辨</li>
+      <li>搜索框与头部面板之间有清晰边界（不是两块白糊在一起）</li>
+      <li>全页无一处「白字落在浅色玻璃上」</li>
+      <li>同行卡片等高；分类卡内 6 个链接排成整齐 2 列，无 1 列 5 行的残缺行</li>
+      <li>页面滚动时背景光晕不动，玻璃不闪烁</li>
+      <li>键盘 Tab 能走完全部链接，焦点框可见</li>
+      <li>禁用 backdrop-filter（DevTools 里关掉）后，卡片是不透明白卡而非透明色块</li>
+      <li>移动端 375 宽下：无溢出、无文字截断、滚动帧率不低于 50fps</li>
+      <li>页面里搜不到任何硬编码色值（除 CSS 变量定义处）</li>
+    </ul>
+  </section>
+
+  <!-- ================= 10 ================= -->
+  <section id="s10">
+    <h2>10 · 已知坑（踩过，必须避开）</h2>
+
+    <div class="rule warn">
+      <div class="rid">P-1</div>
+      <h4>浅底上的白字会整块蒸发</h4>
+      <p>从深色版翻浅色时，「热门推荐」和「分类导航」是两套结构完全一样的标题行。按区块推进改色，只改了前者，分类标题留在原地当白字 —— 浅底上直接看不见，只有截图才发现。<br><strong>做法：按「角色」清点（标题几处、副标题几处、箭头几处），逐一配 id 改完销账；改完第一张图专门找"哪块不见了"，不是看"好不好看"。</strong></p>
+    </div>
+
+    <div class="rule warn">
+      <div class="rid">P-2</div>
+      <h4>白玻璃叠白玻璃 = 边界消失</h4>
+      <p>搜索框原本白 78% 叠在面板白 62% 上，两者糊成一片，完全看不出搜索框在哪。<strong>层级内的元素必须靠不透明度差 + 描边区分</strong>，不能都靠模糊。</p>
+    </div>
+
+    <div class="rule warn">
+      <div class="rid">P-3</div>
+      <h4>浅色底上用大黑投影会发脏</h4>
+      <p>深色版的 <code>rgba(0,0,0,.35) 0 16px 40px</code> 直接搬到浅色版，卡片下面像糊了一块灰。<strong>浅色版投影必须同时降不透明度（≤.12）和缩半径，并换成带蓝的黑。</strong></p>
+    </div>
+
+    <div class="rule warn">
+      <div class="rid">P-4</div>
+      <h4>中英混排会导致卡片高度不齐</h4>
+      <p>「生活服务」四个汉字和「12306」「WPS」的基线、行高不一致，同规格卡片能差出 14px。<strong>解决办法是让网格拉伸等高（R-3.4），不是逐张写死高度。</strong></p>
+    </div>
+
+    <div class="rule warn">
+      <div class="rid">P-5</div>
+      <h4>单子节点的标题行会被父级居中</h4>
+      <p>标题组只有一个 hug 子节点时，父级设两端对齐会把它顶到水平中间。浅色改造时踩过一次，<strong>父级一律 <code>flex-start</code></strong>。</p>
+    </div>
+
+    <div class="rule warn">
+      <div class="rid">P-6</div>
+      <h4>改图标颜色不能改整段 svg 属性</h4>
+      <p>（设计稿侧）给图标节点直接更新 <code>svg</code> 属性会静默失败。SVG 展开后颜色存在子矢量节点上：实心图形改 <code>fills</code>，描边图标改 <code>strokes</code>，圆形是 ELLIPSE 节点。<strong>只改颜色，不动 strokeWeight。</strong></p>
+    </div>
+  </section>
+
+  <!-- ================= 11 ================= -->
+  <section id="s11">
+    <h2>11 · 设计稿侧规则（画布）</h2>
+    <ul class="plain">
+      <li>所有间距取 4 的倍数，卡片宽度由栅格算出，不允许手拖</li>
+      <li>图层命名「角色-内容」，如 <code>站点名-哔哩哔哩</code>、<code>分类卡片-财经股票</code>，<strong>不允许出现 Frame 123、Rectangle 45 这类默认名</strong></li>
+      <li>重复结构（8 个分类卡 × 6 链接）在画布上仍保持独立图层，但必须遵守同一套间距与圆角，方便后续组件化</li>
+      <li>任何颜色改动都必须同步本文件第 1 节的令牌表</li>
+      <li>下一版建议：把第 1 节全部令牌做成画布变量（颜色 / 圆角 / 间距三组，各含 Light 模式），实现深色浅色一键切换，而不是维护两份画稿</li>
+    </ul>
+  </section>
+
+  <div class="foot">
+    <span>启航导航 · 前端开发规范 v1.0</span>
+    <span>2026-10-01 · 依据画布 1440 基准版实测值</span>
+  </div>
+
+</div>
+</body>
+</html>

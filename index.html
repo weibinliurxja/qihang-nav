@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>启航导航</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- 背景光晕：fixed + pointer-events:none（R-2.5） -->
+<div class="halo halo-1" aria-hidden="true"></div>
+<div class="halo halo-2" aria-hidden="true"></div>
+<div class="halo halo-3" aria-hidden="true"></div>
+
+<!-- ============ 登录门 ============ -->
+<div class="gate" id="gate" hidden>
+  <form class="glass-panel gate-panel" id="gate-form">
+    <div class="logo" aria-hidden="true">
+      <svg viewBox="0 0 20 20" fill="#FFFFFF">
+        <path d="M10 0.8 12.3 7.7 19.2 10 12.3 12.3 10 19.2 7.7 12.3 0.8 10 7.7 7.7Z"/>
+      </svg>
+    </div>
+    <h1 class="gate-title">启航导航</h1>
+    <p class="gate-sub">输入口令进入</p>
+    <input class="gate-input" id="gate-pwd" type="password" autocomplete="current-password"
+           placeholder="访问口令" aria-label="访问口令">
+    <button class="btn-primary" id="gate-submit" type="submit">进入</button>
+    <p class="gate-err" id="gate-err" hidden></p>
+  </form>
+</div>
+
+<!-- ============ 主界面 ============ -->
+<div class="page" id="page" hidden>
+
+  <header class="hero">
+    <div class="glass-panel hero-panel">
+      <div class="brand-row">
+        <div class="logo" aria-hidden="true">
+          <svg viewBox="0 0 20 20" fill="#FFFFFF">
+            <path d="M10 0.8 12.3 7.7 19.2 10 12.3 12.3 10 19.2 7.7 12.3 0.8 10 7.7 7.7Z"/>
+          </svg>
+        </div>
+        <span class="brand-name">启航导航</span>
+        <div class="brand-actions">
+          <button class="btn-ghost" id="edit-toggle" type="button" aria-pressed="false">
+            <svg viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.4"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M9.2 1.6 11.4 3.8 4.7 10.5 1.5 11.5 2.5 8.3Z"/>
+            </svg>
+            <span id="edit-label">编辑</span>
+          </button>
+          <button class="btn-ghost" id="logout" type="button">退出</button>
+        </div>
+      </div>
+
+      <!-- 分类导航（规范 §4.2 主导航） -->
+      <nav class="catnav" id="catnav" aria-label="分类"></nav>
+
+      <div class="search-row">
+        <div class="search-box" id="search-box">
+          <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.6"
+               stroke-linecap="round" aria-hidden="true">
+            <circle cx="6.4" cy="6.4" r="4.9"/>
+            <path d="M10.2 10.2 14 14"/>
+          </svg>
+          <input id="q" type="search" placeholder="搜索站点、网址或分类" autocomplete="off"
+                 spellcheck="false" aria-label="搜索">
+          <button class="search-clear" id="q-clear" type="button" aria-label="清空搜索">
+            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"
+                 stroke-linecap="round" aria-hidden="true">
+              <path d="M3 3 11 11M11 3 3 11"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="content">
+    <div id="grid"></div>
+    <p class="empty" id="empty" hidden>没有匹配的结果</p>
+    <button class="add-cat" id="add-cat" type="button">
+      <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.6"
+           stroke-linecap="round" aria-hidden="true">
+        <path d="M7.5 2v11M2 7.5h11"/>
+      </svg>
+      新增分类
+    </button>
+  </main>
+</div>
+
+<!-- ============ 未保存提示条 ============ -->
+<div class="glass-panel savebar" id="savebar" role="status">
+  <span id="savebar-text">有未保存的修改</span>
+  <button class="btn-ghost" id="discard" type="button">放弃</button>
+  <button class="btn-primary" id="save" type="button">保存</button>
+</div>
+
+<!-- ============ 链接编辑弹窗 ============ -->
+<div class="modal" id="link-modal" role="dialog" aria-modal="true" aria-labelledby="link-modal-title">
+  <form class="glass-panel modal-panel" id="link-form">
+    <h2 class="modal-title" id="link-modal-title">新增站点</h2>
+    <div class="field">
+      <label for="ln-name">名称</label>
+      <input id="ln-name" required maxlength="40" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="ln-url">网址</label>
+      <!-- 刻意不用 type="url"：浏览器会拒绝裸域名（如 example.com），
+           而我们在 app.js 里会自动补 https://，两者会打架导致表单提交不了 -->
+      <input id="ln-url" required type="text" inputmode="url" placeholder="https://" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="ln-desc">描述（可留空）</label>
+      <input id="ln-desc" maxlength="40" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>图标</label>
+      <div class="icon-field">
+        <span class="icon-preview" id="ln-icon-preview" aria-hidden="true"></span>
+        <span class="icon-field-actions">
+          <label class="btn-ghost" for="ln-icon-file">选图片</label>
+          <input id="ln-icon-file" type="file" hidden
+                 accept="image/png,image/jpeg,image/webp,image/svg+xml,image/x-icon,.ico,.png,.jpg,.jpeg,.webp,.svg">
+          <button class="btn-ghost" type="button" id="ln-icon-clear">改回自动</button>
+        </span>
+      </div>
+      <p class="field-hint" id="ln-icon-hint">留空则自动抓取网站图标</p>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" type="button" data-close>取消</button>
+      <button class="btn-primary" type="submit">确定</button>
+    </div>
+  </form>
+</div>
+
+<!-- ============ 分类编辑弹窗 ============ -->
+<div class="modal" id="cat-modal" role="dialog" aria-modal="true" aria-labelledby="cat-modal-title">
+  <form class="glass-panel modal-panel" id="cat-form">
+    <h2 class="modal-title" id="cat-modal-title">新增分类</h2>
+    <div class="field">
+      <label for="cat-name">分类名称</label>
+      <input id="cat-name" required maxlength="12" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>识别色</label>
+      <div class="swatches" id="cat-swatches"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" type="button" data-close>取消</button>
+      <button class="btn-primary" type="submit">确定</button>
+    </div>
+  </form>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

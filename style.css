@@ -1,0 +1,662 @@
+/* ==========================================================================
+   启航导航 · style.css
+   唯一依据：docs/启航导航-开发规范.html
+   规则编号（R-x.x / P-x）在注释中标出，便于对照验收。
+   ========================================================================== */
+
+/* ---------- 1. 设计令牌（R-1.1 只用 8 个语义色） ---------- */
+:root {
+  /* 颜色 */
+  --color-brand: #014DB2;
+  --color-brand-soft: #EAF1FF;
+  --color-ink: #0A1628;      /* L1 标题 */
+  --color-ink-2: #46566E;    /* L2 正文深 */
+  --color-ink-3: #33415A;    /* L3 正文 */
+  --color-ink-4: #5A6B85;    /* L4 次级 */
+  --color-ink-5: #8A97AC;    /* L5 弱化 */
+  --color-line: #E6EBF3;
+  --color-surface: #FFFFFF;
+
+  /* 分类识别色（R-1.10 固定 8 色，只做色块不做文字） */
+  --cat-1: #2563EB;
+  --cat-2: #F97316;
+  --cat-3: #EC4899;
+  --cat-4: #8B5CF6;
+  --cat-5: #DC2626;
+  --cat-6: #0EA5E9;
+  --cat-7: #0D9488;
+  --cat-8: #16A34A;
+
+  /* 玻璃三档（§1.3） */
+  --glass-card-fill: rgba(255, 255, 255, .60);
+  --glass-card-border: rgba(255, 255, 255, .90);
+  --glass-card-blur: 24px;
+  --glass-card-shadow: 0 12px 32px rgba(10, 22, 40, .08);
+
+  --glass-panel-fill: rgba(255, 255, 255, .62);
+  --glass-panel-border: rgba(255, 255, 255, .92);
+  --glass-panel-blur: 40px;
+  --glass-panel-shadow: 0 16px 44px rgba(10, 22, 40, .10);
+
+  --glass-inset: inset 0 1px 2px rgba(255, 255, 255, .70);
+
+  /* 尺寸阶梯（§1.5 / §8） */
+  --radius-xs: 2px;
+  --radius-s: 6px;
+  --radius-m: 10px;
+  --radius-l: 20px;
+  --radius-search: 26px;
+  --radius-xl: 28px;
+  --radius-pill: 9999px;
+
+  --space-6: 6px;
+  --space-8: 8px;
+  --space-10: 10px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-18: 18px;
+  --space-36: 36px;
+
+  /* R-3.2：hero 外层内边距 + 面板内边距 = --page-x，必须联动 */
+  --page-x: 120px;
+  --hero-x: 24px;
+  --page-w: 1440px;
+
+  --mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* 本文件的类选择器会覆盖 UA 的 [hidden]{display:none}，必须显式压回去 */
+[hidden] { display: none !important; }
+
+/* ---------- 2. 底色与光晕（§1.2 / R-1.2 / R-1.3 / R-2.5） ---------- */
+body {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #EAF1FF 0%, #F1ECFF 38%, #FFEFF5 68%, #E9F6FF 100%) fixed;
+  color: var(--color-ink);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC",
+               "Microsoft YaHei", sans-serif;
+  font-size: 14px;
+  line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* 三团光晕：fixed + pointer-events:none + z-index:0，不随滚动重绘 */
+.halo {
+  position: fixed;
+  pointer-events: none;
+  z-index: 0;
+  border-radius: 50%;
+}
+.halo-1 {
+  width: 980px; height: 980px; left: 8%; top: -26%;
+  background: radial-gradient(circle, rgba(77, 140, 255, .38) 0%, transparent 70%);
+}
+.halo-2 {
+  width: 1100px; height: 1100px; right: -6%; bottom: -56%;
+  background: radial-gradient(circle, rgba(158, 107, 250, .32) 0%, transparent 70%);
+}
+.halo-3 {
+  width: 940px; height: 940px; left: 34%; top: 34%;
+  background: radial-gradient(circle, rgba(255, 107, 173, .26) 0%, transparent 70%);
+}
+
+/* 内容层压在光晕之上 */
+.page, .gate { position: relative; z-index: 1; }
+
+/* ---------- 3. 玻璃基类（§2.1 / R-2.4 降级） ---------- */
+.glass-card,
+.glass-panel {
+  background: rgba(255, 255, 255, .92); /* 降级：不支持 backdrop-filter 时是不透明白 */
+  border: 1px solid var(--glass-card-border);
+}
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .glass-card {
+    background: var(--glass-card-fill);
+    border-color: var(--glass-card-border);
+    backdrop-filter: blur(var(--glass-card-blur)) saturate(160%);
+    -webkit-backdrop-filter: blur(var(--glass-card-blur)) saturate(160%);
+  }
+  .glass-panel {
+    background: var(--glass-panel-fill);
+    border-color: var(--glass-panel-border);
+    backdrop-filter: blur(var(--glass-panel-blur)) saturate(160%);
+    -webkit-backdrop-filter: blur(var(--glass-panel-blur)) saturate(160%);
+  }
+}
+/* 内高光写进 box-shadow，不用伪元素（R-2.2） */
+.glass-card {
+  border-radius: var(--radius-l);
+  box-shadow: var(--glass-inset), var(--glass-card-shadow);
+}
+.glass-panel {
+  border-radius: var(--radius-xl);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, .75), var(--glass-panel-shadow);
+}
+
+/* ---------- 4. 登录门（复用面板档） ---------- */
+.gate {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-16);
+}
+.gate-panel {
+  width: 100%;
+  max-width: 360px;
+  padding: var(--space-36) var(--space-16) var(--space-16);
+  text-align: center;
+}
+.gate-panel .logo { margin: 0 auto var(--space-12); }
+.gate-title { font-size: 18px; font-weight: 600; color: var(--color-ink); }
+.gate-sub { font-size: 12px; color: var(--color-ink-4); margin-bottom: var(--space-18); }
+.gate-input {
+  width: 100%;
+  height: 44px;
+  padding: 0 var(--space-16);
+  font: inherit;
+  font-size: 14px;
+  color: var(--color-ink);
+  background: rgba(255, 255, 255, .85); /* R-1.7 面板内不再叠玻璃 */
+  border: 1px solid rgba(10, 22, 40, .07);
+  border-radius: var(--radius-m);
+  outline: none;
+}
+.gate-input:focus { border-color: var(--color-brand); }
+.btn-primary {
+  width: 100%;
+  height: 44px;
+  margin-top: var(--space-10);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--color-brand);
+  border: none;
+  border-radius: var(--radius-m);
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(1, 77, 178, .30); /* R-4.2 全页唯一彩色投影 */
+  transition: background 160ms cubic-bezier(.2, .8, .3, 1);
+}
+.btn-primary:hover { background: #0A5CD1; }
+.btn-primary:active { background: #01408F; }
+.btn-primary:disabled { opacity: .6; cursor: default; }
+.gate-err { margin-top: var(--space-10); font-size: 12px; color: #DC2626; }
+
+/* ---------- 5. 头部悬浮面板（§3 / §4.2） ---------- */
+.hero {
+  max-width: var(--page-w);
+  margin: 0 auto;
+  padding: var(--space-16) var(--hero-x); /* R-3.2：与面板内边距相加 = --page-x */
+}
+.hero-panel { padding: var(--space-16) calc(var(--page-x) - var(--hero-x)); }
+.brand-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-10);
+  min-height: 60px;
+}
+.logo {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-m);
+  background: linear-gradient(180deg, #4D8CFF 0%, #0556B2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.logo svg { width: 20px; height: 20px; display: block; }
+.brand-name { font-size: 20px; font-weight: 600; color: var(--color-ink); }
+.brand-actions { margin-left: auto; display: flex; align-items: center; gap: var(--space-10); }
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+  padding: 7px var(--space-16);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-brand);
+  background: rgba(255, 255, 255, .85);
+  border: 1px solid rgba(10, 22, 40, .07);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: background 160ms cubic-bezier(.2, .8, .3, 1),
+              border-color 160ms cubic-bezier(.2, .8, .3, 1);
+}
+.btn-ghost:hover { background: #fff; border-color: var(--color-brand); }
+.btn-ghost[aria-pressed="true"] { color: #fff; background: var(--color-brand); border-color: var(--color-brand); }
+.btn-ghost svg { width: 14px; height: 14px; }
+
+/* 分类导航 = 规范 §4.2「主导航」：14px，间距 26，当前项品牌蓝 600 */
+.catnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-10) 26px;
+  padding: var(--space-6) 0 var(--space-12);
+}
+.catnav button {
+  padding: 0;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-ink-2);
+  background: none;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 160ms cubic-bezier(.2, .8, .3, 1);
+}
+.catnav button:hover { color: var(--color-brand); }
+.catnav button[aria-current="true"] { color: var(--color-brand); font-weight: 600; }
+
+/* 搜索框（§4.3）：面板内不叠玻璃（R-1.7）。整块居中。 */
+.search-row { padding-bottom: var(--space-6); }
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: var(--space-10);
+  width: 660px;
+  max-width: 100%;
+  height: 52px;
+  margin: 0 auto;
+  padding: 0 22px;
+  background: rgba(255, 255, 255, .85);
+  border: 1px solid rgba(10, 22, 40, .07);
+  border-radius: var(--radius-search);
+}
+.search-box:focus-within { border-color: var(--color-brand); }
+.search-box svg { flex: none; width: 15px; height: 15px; color: var(--color-ink-5); }
+.search-box input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  font: inherit;
+  font-size: 13px;
+  color: var(--color-ink);
+  background: none;
+  border: none;
+  outline: none;
+}
+.search-box input::placeholder { color: var(--color-ink-5); }
+.search-clear {
+  flex: none;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 26px; height: 26px;
+  padding: 0;
+  color: var(--color-ink-5);
+  background: none;
+  border: none;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+}
+.search-clear:hover { background: rgba(10, 22, 40, .06); color: var(--color-ink-2); }
+.search-clear svg { width: 14px; height: 14px; }
+.search-box.has-value .search-clear { display: flex; }
+
+/* ---------- 6. 内容区与区块标题行（§4.5 / R-1.11） ---------- */
+.content {
+  max-width: var(--page-w);
+  margin: 0 auto;
+  padding: var(--space-36) var(--page-x) 96px;
+}
+.block { margin-bottom: var(--space-36); }
+.block-head {
+  display: flex;            /* R-4.4 父级 flex-start */
+  align-items: center;
+  gap: var(--space-10);
+  margin-bottom: var(--space-16);
+}
+.block-dot {
+  flex: none;
+  width: 4px;
+  height: 18px;
+  border-radius: var(--radius-xs);
+  background: var(--color-brand); /* R-1.11 区块装饰色固定品牌蓝，不跟随分类色 */
+}
+.block-title { font-size: 18px; font-weight: 600; color: var(--color-ink); }
+.block-sub { font-size: 12px; color: var(--color-ink-4); }
+.block-tools { margin-left: auto; display: flex; gap: var(--space-6); }
+
+/* 编辑态：把分类整体框出来，改名/删除落在框的右上角。
+   用 outline 而不是 border —— outline 不参与布局，切换编辑态时内容不会跳。
+   站点卡在编辑态被虚线圈出是同一套视觉语言。 */
+.edit-mode .block {
+  position: relative;
+  border-radius: var(--radius-l);
+  outline: 1px dashed rgba(1, 77, 178, .32);
+  outline-offset: 14px;
+  margin-bottom: 64px; /* 给虚线框留出空间，别和下一个区块贴住 */
+}
+
+/* ---------- 7. 站点卡网格（§4.6 热门站点卡规格） ---------- */
+.sites {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr); /* R-3.1 由栅格算宽度，不写死 */
+  gap: var(--space-12);
+  align-items: start;                    /* R-4.5 自由内容卡不做同高 */
+}
+.site-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-10);
+  min-height: 125px;
+  padding: 14px;
+  color: inherit;
+  text-decoration: none;
+  transition: background 160ms cubic-bezier(.2, .8, .3, 1),
+              border-color 160ms cubic-bezier(.2, .8, .3, 1),
+              box-shadow 160ms cubic-bezier(.2, .8, .3, 1),
+              transform 160ms cubic-bezier(.2, .8, .3, 1);
+}
+@media (hover: hover) {
+  .site-card:hover {
+    background: rgba(255, 255, 255, .72);
+    border-color: rgba(255, 255, 255, 1);
+    transform: translateY(-4px);
+    box-shadow: var(--glass-inset), 0 20px 44px rgba(10, 22, 40, .12);
+  }
+  .site-card:active { transform: translateY(-1px); }
+}
+/* 站点标识：默认是分类识别色方块 + 白色首字（R-5.2）；
+   抓到真图标时换成白底 + 图标，色块退为兜底。 */
+.site-mark {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-m);
+  background: var(--cat, var(--color-brand));
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.site-icon {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  opacity: 0;
+  transition: opacity 160ms cubic-bezier(.2, .8, .3, 1);
+}
+.site-mark.has-icon {
+  background: rgba(255, 255, 255, .92);
+  box-shadow: inset 0 0 0 1px rgba(10, 22, 40, .06);
+}
+.site-mark.has-icon .site-mark-letter { visibility: hidden; }
+.site-mark.has-icon .site-icon { opacity: 1; }
+.site-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.site-desc {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.site-go {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 14px;
+  height: 14px;
+  color: var(--color-ink-5);
+}
+
+/* 新增站点：与卡片同尺寸的虚线格 */
+.site-add {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-8);
+  min-height: 125px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--color-brand);
+  background: rgba(255, 255, 255, .40);
+  border: 1px dashed rgba(255, 255, 255, .9);
+  border-radius: var(--radius-l);
+  cursor: pointer;
+}
+.site-add:hover { background: rgba(255, 255, 255, .68); }
+.site-add svg { width: 18px; height: 18px; }
+
+/* 编辑态：卡右上角换成改名/删除 */
+.site-tools {
+  position: absolute;
+  top: var(--space-10);
+  right: var(--space-10);
+  display: none;
+  gap: var(--space-6);
+}
+.edit-mode .site-tools { display: flex; }
+.edit-mode .site-go { display: none; }
+.edit-mode .site-card { cursor: default; }
+.edit-mode .site-card:hover { transform: none; }
+
+.icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px; height: 24px;
+  padding: 0;
+  color: var(--color-ink-5);
+  background: rgba(255, 255, 255, .8);
+  border: none;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+.icon-btn:hover { background: #fff; color: var(--color-ink-2); }
+.icon-btn.danger:hover { color: #DC2626; }
+.icon-btn svg { width: 13px; height: 13px; }
+
+/* 新增分类：整行虚线 */
+.add-cat {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-6);
+  width: 100%;
+  margin-top: var(--space-12);
+  padding: var(--space-16);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-brand);
+  background: rgba(255, 255, 255, .45);
+  border: 1px dashed rgba(255, 255, 255, .9);
+  border-radius: var(--radius-l);
+  cursor: pointer;
+}
+.add-cat:hover { background: rgba(255, 255, 255, .70); }
+.add-cat svg { width: 15px; height: 15px; }
+.edit-mode .add-cat { display: flex; }
+
+/* 首次使用 / 空状态 */
+.empty {
+  padding: 56px 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-ink-4);
+}
+
+/* ---------- 8. 浮层（未保存条 / 弹窗） ---------- */
+.savebar {
+  position: fixed;
+  left: 50%;
+  bottom: var(--space-18);
+  transform: translateX(-50%);
+  z-index: 3;
+  display: none;
+  align-items: center;
+  gap: var(--space-12);
+  padding: var(--space-10) var(--space-12) var(--space-10) var(--space-18);
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  color: var(--color-ink-2);
+}
+.savebar.is-open { display: flex; }
+.savebar .btn-primary {
+  width: auto;
+  height: 36px;
+  margin: 0;
+  padding: 0 var(--space-18);
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-16);
+  background: rgba(10, 22, 40, .28);
+}
+.modal.is-open { display: flex; }
+.modal-panel { width: 100%; max-width: 420px; padding: var(--space-16); }
+.modal-title { font-size: 15px; font-weight: 600; color: var(--color-ink); margin-bottom: var(--space-12); }
+.field { margin-bottom: var(--space-10); }
+.field > label { display: block; font-size: 12px; color: var(--color-ink-4); margin-bottom: var(--space-6); }
+.field input {
+  width: 100%;
+  height: 40px;
+  padding: 0 var(--space-12);
+  font: inherit;
+  font-size: 13px;
+  color: var(--color-ink);
+  background: rgba(255, 255, 255, .85);
+  border: 1px solid rgba(10, 22, 40, .07);
+  border-radius: var(--radius-m);
+  outline: none;
+}
+.field input:focus { border-color: var(--color-brand); }
+
+/* 图标字段：左边预览，右边两个按钮 */
+.icon-field { display: flex; align-items: center; gap: var(--space-12); }
+.icon-preview {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-m);
+  background: rgba(255, 255, 255, .85);
+  border: 1px solid rgba(10, 22, 40, .07);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.icon-preview img { width: 100%; height: 100%; object-fit: contain; padding: 3px; }
+.icon-preview.is-empty {
+  background: var(--color-brand);
+  border-color: var(--color-brand);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+}
+.icon-field-actions { display: flex; flex-wrap: wrap; gap: var(--space-8); }
+.icon-field-actions .btn-ghost { padding: 6px 14px; font-size: 12px; }
+.field-hint {
+  margin-top: var(--space-6);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-ink-4);
+}
+.swatches { display: flex; gap: var(--space-8); }
+.swatch {
+  width: 22px; height: 22px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+.swatch[aria-pressed="true"] { border-color: var(--color-ink); }
+.modal-actions { display: flex; justify-content: flex-end; gap: var(--space-8); margin-top: var(--space-16); }
+.modal-actions .btn-ghost { padding: 7px var(--space-16); }
+.modal-actions .btn-primary {
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 8px var(--space-18);
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+}
+
+/* ---------- 9. 交互与可达性（R-6.1 / R-6.2） ---------- */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
+.site-card:focus-within,
+.site-card:focus-visible {
+  border-color: rgba(255, 255, 255, 1);
+  box-shadow: var(--glass-inset), 0 20px 44px rgba(10, 22, 40, .12);
+}
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- 10. 响应式（§7 / R-7.1 / R-7.2） ---------- */
+@media (max-width: 1439px) {
+  :root { --page-x: 64px; --hero-x: 16px; }
+  .sites { grid-template-columns: repeat(4, 1fr); }   /* §7 热门卡 4 列 */
+}
+@media (max-width: 1023px) {
+  /* R-7.1 窄屏降玻璃开销 */
+  :root {
+    --page-x: 40px;
+    --hero-x: 16px;
+    --glass-card-blur: 16px;
+    --glass-panel-blur: 24px;
+  }
+  .sites { grid-template-columns: repeat(3, 1fr); }   /* §7 热门卡 3 列 */
+  .search-box { width: 100%; }
+}
+@media (max-width: 767px) {
+  :root { --page-x: 20px; --hero-x: 0px; }
+  .sites { grid-template-columns: repeat(2, 1fr); }   /* §7 热门卡 2 列 */
+  .brand-name { font-size: 18px; }
+  .catnav { gap: var(--space-8) var(--space-16); }
+  .content { padding-top: var(--space-16); }
+  .block-title { font-size: 15px; }
+  /* R-7.2 移动端搜索框吸附置顶 */
+  .hero { padding-bottom: var(--space-16); }
+  .hero-panel {
+    border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+    padding-top: var(--space-12);
+    padding-bottom: var(--space-12);
+  }
+  .search-row { position: sticky; top: 0; z-index: 2; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
