@@ -36,6 +36,20 @@
   var accountBusy = false;
   var elGateForm = $('gate-form'), elGatePwd = $('gate-pwd'), elGateErr = $('gate-err'), elGateSubmit = $('gate-submit');
   var elQ = $('q'), elSearchBox = $('search-box'), elQClear = $('q-clear');
+  var elEngine = $('search-engine');
+  var engines = { baidu: 'https://www.baidu.com/s?wd=', bing: 'https://www.bing.com/search?q=', google: 'https://www.google.com/search?q=', duckduckgo: 'https://duckduckgo.com/?q=' };
+  var importPlan = null, importRevision = 0;
+  function preferenceKey() { return 'nav-engine:' + state.user.username.toLowerCase(); }
+  function updateSearch() {
+    state.query = elEngine.value === 'local' ? elQ.value : '';
+    elQ.placeholder = elEngine.value === 'local' ? '搜索站点、网址或分类' : '输入关键词，搜索网络';
+    render();
+  }
+  function closeImport() {
+    if ($('import-modal').classList.contains('is-open')) { elSave.disabled = false; elDiscard.disabled = false; }
+    importRevision++; importPlan = null; $('import-modal').classList.remove('is-open');
+    $('import-confirm').disabled = true;
+  }
   var elEditToggle = $('edit-toggle'), elEditLabel = $('edit-label'), elLogout = $('logout');
   var elSavebar = $('savebar'), elSavebarText = $('savebar-text'), elSave = $('save'), elDiscard = $('discard');
   var elAddCat = $('add-cat');
@@ -429,8 +443,10 @@
     } else {
       state.selectedId = state.data.categories.length ? state.data.categories[0].id : null;
     }
+    try { elEngine.value = localStorage.getItem(preferenceKey()) || 'bing'; } catch (_) { elEngine.value = 'bing'; }
+    if (elEngine.value !== 'local' && !engines[elEngine.value]) elEngine.value = 'bing';
     setDirty(false);
-    render();
+    updateSearch();
   }
 
   function requestJson(url, method, body) {
@@ -451,6 +467,7 @@
   }
 
   function clearAccountState() {
+    closeImport();
     state.user = null;
     state.data = { version: 1, categories: [] };
     state.editing = false; state.selectedId = null; state.query = '';
@@ -588,7 +605,7 @@
   });
 
   elQ.addEventListener('input', function () {
-    state.query = elQ.value;
+    state.query = elEngine.value === 'local' ? elQ.value : '';
     elSearchBox.classList.toggle('has-value', !!elQ.value);
     render();
   });
@@ -597,6 +614,16 @@
     elSearchBox.classList.remove('has-value');
     elQ.focus();
     render();
+  });
+  elEngine.addEventListener('change', function () {
+    if (state.user) { try { localStorage.setItem(preferenceKey(), elEngine.value); } catch (_) {} }
+    updateSearch();
+  });
+  $('search-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var query = elQ.value.trim();
+    if (query && engines[elEngine.value]) window.open(engines[elEngine.value] + encodeURIComponent(query), '_blank', 'noopener,noreferrer');
+    else updateSearch();
   });
   elQ.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
@@ -706,6 +733,44 @@
   });
 
   elDiscard.addEventListener('click', function () { loadData().catch(function (err) { elSavebarText.textContent = err.message; }); });
+
+  $('import-bookmarks').addEventListener('click', function () {
+    if (elSave.disabled) return;
+    closeImport(); elSave.disabled = true; elDiscard.disabled = true; $('bookmark-file').value = ''; $('import-summary').textContent = '';
+    $('import-preview').textContent = ''; $('import-modal').classList.add('is-open'); $('bookmark-file').focus();
+  });
+  $('import-cancel').addEventListener('click', function () { closeImport(); $('import-bookmarks').focus(); });
+  $('import-modal').addEventListener('click', function (e) { if (e.target === this) closeImport(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeImport(); });
+  $('bookmark-file').addEventListener('change', async function () {
+    var revision = ++importRevision, owner = state.user, file = this.files[0];
+    importPlan = null; $('import-confirm').disabled = true; $('import-preview').textContent = '';
+    if (!file) return;
+    $('import-summary').textContent = '正在读取…';
+    try {
+      if (file.size > 10 * 1024 * 1024) throw new Error('文件超过 10 MB，请分批导出');
+      var html = await file.text();
+      if (revision !== importRevision || owner !== state.user) return;
+      importPlan = BookmarkImport.plan(state.data, BookmarkImport.parse(html));
+      var stats = importPlan.stats;
+      $('import-summary').textContent = '新增 ' + stats.added + ' 个站点、' + stats.categories + ' 个分类；跳过重复 ' + stats.duplicate + ' 个、无效 ' + stats.invalid + ' 个（仅支持 HTTP/HTTPS，网址最长 4096 字符）；名称截短 ' + stats.truncated + ' 个。空文件夹不导入。';
+      importPlan.data.categories.forEach(function (cat) {
+        var previous = catById(cat.id), count = cat.links.length - (previous ? previous.links.length : 0);
+        if (!count) return;
+        var item = document.createElement('li'); item.textContent = cat.name + '：新增 ' + count + ' 个站点';
+        $('import-preview').appendChild(item);
+      });
+      $('import-confirm').disabled = !stats.added;
+    } catch (err) { if (revision === importRevision && owner === state.user) $('import-summary').textContent = err.message; }
+  });
+  $('import-confirm').addEventListener('click', function () {
+    if (!importPlan || !state.user) return;
+    state.data = importPlan.data;
+    if (!state.selectedId && state.data.categories.length) state.selectedId = state.data.categories[0].id;
+    state.editing = true; document.body.classList.add('edit-mode');
+    elEditToggle.setAttribute('aria-pressed', 'true'); elEditLabel.textContent = '完成';
+    closeImport(); setDirty(true); render(); $('import-bookmarks').focus();
+  });
 
   /* ---------- 启动 ---------- */
   // Remove the legacy plaintext passphrase; authentication now lives in an HttpOnly cookie.

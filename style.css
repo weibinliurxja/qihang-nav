@@ -256,7 +256,19 @@ body {
 .catnav button[aria-current="true"] { color: var(--color-brand); font-weight: 600; }
 
 /* 搜索框（§4.3）：面板内不叠玻璃（R-1.7）。整块居中。 */
-.search-row { padding-bottom: var(--space-6); }
+.search-row { padding-bottom: var(--space-6); display: flex; align-items: center; gap: 10px; max-width: 840px; margin: auto; }
+.search-row .search-box { flex: 1; width: auto; min-width: 0; }
+.search-row > .btn-primary { flex: none; width: auto; padding: 12px 20px; }
+#search-engine { font: inherit; color: var(--color-ink); background: rgba(255,255,255,.85); border: 1px solid rgba(10,22,40,.1); border-radius: 12px; padding: 12px 8px; max-width: 145px; }
+#import-preview { max-height: 240px; overflow: auto; padding-left: 20px; overflow-wrap: anywhere; }
+#import-summary { font-size: 13px; line-height: 1.7; }
+#import-modal .modal-panel { max-height: 85vh; overflow: auto; }
+@media (max-width: 480px) {
+  .search-row { flex-wrap: wrap; }
+  #search-engine { max-width: calc(100% - 80px); }
+  .search-row .search-box { flex-basis: 100%; order: 3; padding: 0 12px; }
+  .search-row > .btn-primary { margin-left: auto; }
+}
 .search-box {
   display: flex;
   align-items: center;

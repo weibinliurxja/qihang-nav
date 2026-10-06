@@ -54,6 +54,7 @@
             </svg>
             <span id="edit-label">编辑</span>
           </button>
+          <button class="btn-ghost" id="import-bookmarks" type="button">导入书签</button>
           <button class="btn-ghost" id="logout" type="button">退出</button>
         </div>
       </div>
@@ -61,7 +62,12 @@
       <!-- 分类导航（规范 §4.2 主导航） -->
       <nav class="catnav" id="catnav" aria-label="分类"></nav>
 
-      <div class="search-row">
+      <form class="search-row" id="search-form">
+        <select id="search-engine" aria-label="搜索方式">
+          <option value="local">站内搜索</option><option value="baidu">百度</option>
+          <option value="bing" selected>Bing</option><option value="google">Google</option>
+          <option value="duckduckgo">DuckDuckGo</option>
+        </select>
         <div class="search-box" id="search-box">
           <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.6"
                stroke-linecap="round" aria-hidden="true">
@@ -77,7 +83,8 @@
             </svg>
           </button>
         </div>
-      </div>
+        <button class="btn-primary" type="submit">搜索</button>
+      </form>
     </div>
   </header>
 
@@ -107,7 +114,7 @@
     <h2 class="modal-title" id="link-modal-title">新增站点</h2>
     <div class="field">
       <label for="ln-name">名称</label>
-      <input id="ln-name" required maxlength="40" autocomplete="off">
+      <input id="ln-name" required maxlength="200" autocomplete="off">
     </div>
     <div class="field">
       <label for="ln-url">网址</label>
@@ -145,7 +152,7 @@
     <h2 class="modal-title" id="cat-modal-title">新增分类</h2>
     <div class="field">
       <label for="cat-name">分类名称</label>
-      <input id="cat-name" required maxlength="12" autocomplete="off">
+      <input id="cat-name" required maxlength="40" autocomplete="off">
     </div>
     <div class="field">
       <label>识别色</label>
@@ -191,6 +198,19 @@
     <div class="modal-actions"><button class="btn-ghost" type="button" data-close>关闭</button></div>
   </div>
 </div>
+<div class="modal" id="import-modal" role="dialog" aria-modal="true" aria-labelledby="import-title">
+  <div class="glass-panel modal-panel">
+    <h2 class="modal-title" id="import-title">导入书签</h2>
+    <div class="field"><label for="bookmark-file">选择浏览器导出的 HTML 文件（最大 10 MB）</label>
+      <input id="bookmark-file" type="file" accept=".html,.htm,text/html"></div>
+    <p class="field-hint">追加到现有收藏，同名分类合并。确认后可继续编辑，再点击保存。</p>
+    <p id="import-summary" role="status"></p>
+    <ul id="import-preview"></ul>
+    <div class="modal-actions"><button class="btn-ghost" id="import-cancel" type="button">取消</button>
+      <button class="btn-primary" id="import-confirm" type="button" disabled>确认追加</button></div>
+  </div>
+</div>
+<script src="bookmark-import.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

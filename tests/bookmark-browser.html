@@ -1,0 +1,65 @@
+<!doctype html><meta charset="utf-8"><title>书签功能浏览器验证</title>
+<h1>书签功能浏览器验证</h1><pre id="results">运行中</pre><iframe id="preview" style="width:100%;height:850px;border:0"></iframe>
+<script src="../bookmark-import.js"></script>
+<script>
+(async()=>{
+ const lines=[];
+ function check(value,label){if(!value)throw Error(label);lines.push('PASS '+label);document.querySelector('#results').textContent=lines.join('\n');}
+ const html='<!DOCTYPE NETSCAPE-Bookmark-file-1><META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8"><DL><p><DT><H3>工作</H3><DL><p><DT><H3>开发</H3><DL><p><DT><A HREF="https://example.com">中文 &amp; 标题</A></DL><p><DT><A HREF="https://work.example">工作链接</A></DL><p><DT><A HREF="https://root.example">根链接</A><DT><H3>空目录</H3><DL><p></DL><p></DL><p>';
+ try{
+  const entries=BookmarkImport.parse(html);
+  check(entries.length===3,'Edge 未闭合 DT 格式解析');
+  check(entries[0].category==='工作 / 开发','嵌套文件夹路径');
+  check(entries[1].category==='工作' && entries[2].category==='导入书签','兄弟和根目录书签');
+  check(entries[0].name==='中文 & 标题','中文及实体解码');
+  check(BookmarkImport.plan({categories:[]},entries).data.categories.length===3,'空文件夹跳过');
+  let rejected=false;try{BookmarkImport.parse('<h1>wrong</h1>');}catch{rejected=true;}check(rejected,'错误文件拒绝');
+  const source=await (await fetch('../index.html')).text();
+  const setup=`<script>
+  var saved={version:1,categories:[{id:'testcat',name:'示例分类',color:1,links:[{id:'testlink',name:'测试站点',url:'https://example.com',desc:''}]}]};
+  window.open=function(url){window.lastSearch=url;};
+  window.fetch=async function(url,options){var method=options&&options.method||'GET';var json;
+  if(url==='/api/session')json={ok:true,user:{username:'browser-test',role:'user'}};
+  else if(url==='/api/data'){if(method==='POST')saved=JSON.parse(options.body);json={ok:true,data:JSON.parse(JSON.stringify(saved))};}
+  else json={};return {ok:true,status:200,json:async()=>json};};
+  <\/script>`;
+  const frame=document.querySelector('#preview');
+  frame.srcdoc=source.replace('<head>','<head><base href="'+location.origin+'/">').replace('<script src="bookmark-import.js">',setup+'<script src="bookmark-import.js">');
+  await new Promise(resolve=>frame.onload=resolve);
+  const win=frame.contentWindow,doc=win.document;
+  await new Promise(resolve=>setTimeout(resolve,200));
+  check(!doc.querySelector('#page').hidden,'登录后界面渲染（模拟接口）');
+  const engine=doc.querySelector('#search-engine'),input=doc.querySelector('#q');
+  engine.value='bing';engine.dispatchEvent(new win.Event('change'));
+  input.value='中文 & space';input.dispatchEvent(new win.Event('input'));
+  doc.querySelector('#search-form').dispatchEvent(new win.Event('submit',{cancelable:true}));
+  check(win.lastSearch==='https://www.bing.com/search?q='+encodeURIComponent(input.value),'Bing 查询编码');
+  engine.value='local';engine.dispatchEvent(new win.Event('change'));input.value='不存在';input.dispatchEvent(new win.Event('input'));
+  check(doc.querySelector('#empty').hidden===false,'站内过滤');
+  input.value='';input.dispatchEvent(new win.Event('input'));
+  doc.querySelector('#import-bookmarks').click();
+  const dt=new win.DataTransfer();dt.items.add(new win.File([html],'edge.html',{type:'text/html'}));
+  doc.querySelector('#bookmark-file').files=dt.files;doc.querySelector('#bookmark-file').dispatchEvent(new win.Event('change'));
+  await new Promise(resolve=>setTimeout(resolve,150));
+  check(!doc.querySelector('#import-confirm').disabled,'导入预览可确认');
+  check(doc.querySelector('#import-preview').children.length===3,'预览显示三个目标分类');
+  doc.querySelector('#import-confirm').click();
+  check(doc.querySelector('#savebar').classList.contains('is-open'),'追加后显示保存栏');
+  doc.querySelector('#discard').click();await new Promise(resolve=>setTimeout(resolve,50));
+  check(doc.querySelector('#catnav').textContent.indexOf('工作')===-1,'放弃恢复原配置');
+  doc.querySelector('#import-bookmarks').click();
+  const dt2=new win.DataTransfer();dt2.items.add(new win.File([html],'edge.html',{type:'text/html'}));
+  doc.querySelector('#bookmark-file').files=dt2.files;doc.querySelector('#bookmark-file').dispatchEvent(new win.Event('change'));
+  await new Promise(resolve=>setTimeout(resolve,100));doc.querySelector('#import-confirm').click();doc.querySelector('#save').click();
+  await new Promise(resolve=>setTimeout(resolve,50));
+  check(win.saved.categories.length===4,'保存追加结果且保留现有分类');
+  check(!doc.querySelector('#savebar').classList.contains('is-open'),'保存成功清除未保存状态');
+  engine.value='bing';engine.dispatchEvent(new win.Event('change'));
+  check(doc.documentElement.scrollWidth<=frame.clientWidth,'桌面无横向溢出');
+  frame.style.width='375px';await new Promise(resolve=>setTimeout(resolve,100));
+  check(doc.documentElement.scrollWidth<=375,'手机宽度无横向溢出');
+  frame.style.width='100%';
+  document.querySelector('#results').textContent=lines.join('\n')+'\n全部通过';
+ }catch(error){document.querySelector('#results').textContent=lines.join('\n')+'\nFAIL '+error.message;}
+})();
+</script>
