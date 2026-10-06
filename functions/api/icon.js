@@ -103,6 +103,23 @@ function isImageType(ct) {
   return /^image\//i.test(ct) || /x-icon/i.test(ct);
 }
 
+/* 内网 / 本机地址：从边缘节点永远抓不到图标，直接放弃。
+   否则每个这样的链接都要挂到连接超时——CCJ 分组里几十条内网看板，
+   不挡掉的话首屏会被几十个卡住的请求拖死。 */
+function isPrivateHost(host) {
+  const h = String(host || '').toLowerCase();
+  if (h === 'localhost' || h.endsWith('.local') || h.endsWith('.internal')) return true;
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(h);
+  if (!m) return false;
+  const a = Number(m[1]);
+  const b = Number(m[2]);
+  if (a === 10 || a === 127 || a === 0 || a === 255) return true;
+  if (a === 192 && b === 168) return true;
+  if (a === 172 && b >= 16 && b <= 31) return true;
+  if (a === 169 && b === 254) return true;
+  return false;
+}
+
 /* KV 绑定的取法（两种运行时都兼容）：
    线上 EdgeOne 把 KV 命名空间注入成**以绑定名为名字的全局变量**（官方示例就是裸写 my_kv.get(...)）；
    本地 dev-server.mjs 走 context.env 注入。少了这个兼容，线上 env.NAV_KV 会是 undefined。 */
@@ -176,7 +193,11 @@ async function fetchFirstImage(urls) {
 
 async function grabIcon(siteUrl) {
   let origin;
-  try { origin = new URL(siteUrl).origin; } catch (e) { return null; }
+  let host;
+  try { const u = new URL(siteUrl); origin = u.origin; host = u.hostname; } catch (e) { return null; }
+
+  // 内网地址直接放弃，别去挂连接超时
+  if (isPrivateHost(host)) return null;
 
   const candidates = [];
   try {

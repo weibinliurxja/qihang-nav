@@ -8,3 +8,6 @@ data.local.json
 node_modules/
 .edgeone/
 .DS_Store
+
+# 一次性导入用的源文件，不入库
+tmp-import/
