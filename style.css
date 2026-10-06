@@ -336,124 +336,105 @@ body {
   margin-bottom: 64px; /* 给虚线框留出空间，别和下一个区块贴住 */
 }
 
-/* ---------- 7. 站点卡网格（§4.6 热门站点卡规格） ---------- */
+/* ---------- 7. 站点链接网格（紧凑行式，参照 浏览器书签_MIS.html） ----------
+   卡片每张要 125px 高、还带边框和描述，一屏装不下多少。
+   这里改成一行一条的文字链接：6 列、6px 间距、悬停高亮，和 MIS 那份一致。
+   小图标保留（16px），有图标显示图标、没有就退回首字色块 —— 这是站点标识的唯一线索。 */
 .sites {
   display: grid;
-  grid-template-columns: repeat(6, 1fr); /* R-3.1 由栅格算宽度，不写死 */
-  gap: var(--space-12);
-  align-items: start;                    /* R-4.5 自由内容卡不做同高 */
+  grid-template-columns: repeat(6, minmax(0, 1fr)); /* R-3.1 由栅格算宽度，不写死 */
+  gap: 6px;                                          /* 沿用 MIS 的 6px 间距 */
+  align-items: start;
 }
-.site-card {
-  position: relative;
+.site-link {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-10);
-  min-height: 125px;
-  padding: 14px;
-  color: inherit;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 6px 8px;
+  border-radius: var(--radius-s);
+  color: var(--color-brand);
+  font-size: 13px;
+  line-height: 1.4;
   text-decoration: none;
-  transition: background 160ms cubic-bezier(.2, .8, .3, 1),
-              border-color 160ms cubic-bezier(.2, .8, .3, 1),
-              box-shadow 160ms cubic-bezier(.2, .8, .3, 1),
-              transform 160ms cubic-bezier(.2, .8, .3, 1);
+  transition: background 160ms cubic-bezier(.2, .8, .3, 1);
 }
-@media (hover: hover) {
-  .site-card:hover {
-    background: rgba(255, 255, 255, .72);
-    border-color: rgba(255, 255, 255, 1);
-    transform: translateY(-4px);
-    box-shadow: var(--glass-inset), 0 20px 44px rgba(10, 22, 40, .12);
-  }
-  .site-card:active { transform: translateY(-1px); }
+.site-link:hover {
+  background: rgba(255, 255, 255, .60);
+  text-decoration: underline;
 }
-/* 站点标识：默认是分类识别色方块 + 白色首字（R-5.2）；
-   抓到真图标时换成白底 + 图标，色块退为兜底。 */
+.site-link:active { background: rgba(255, 255, 255, .82); }
+
+/* 站点标识：16px 见方。默认分类识别色 + 首字，抓到真图标就换成图标。 */
 .site-mark {
   position: relative;
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-m);
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
   background: var(--cat, var(--color-brand));
   color: #fff;
-  font-size: 16px;
+  font-size: 10px;
   font-weight: 600;
   line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
 }
 .site-icon {
   position: absolute;
-  top: 6px;
-  left: 6px;
-  width: 28px;
-  height: 28px;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
   object-fit: contain;
   opacity: 0;
   transition: opacity 160ms cubic-bezier(.2, .8, .3, 1);
 }
 .site-mark.has-icon {
-  background: rgba(255, 255, 255, .92);
-  box-shadow: inset 0 0 0 1px rgba(10, 22, 40, .06);
+  background: transparent;
+  box-shadow: none;
 }
 .site-mark.has-icon .site-mark-letter { visibility: hidden; }
 .site-mark.has-icon .site-icon { opacity: 1; }
+
 .site-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-ink);
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.site-desc {
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--color-ink-3);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.site-go {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  width: 14px;
-  height: 14px;
-  color: var(--color-ink-5);
 }
 
-/* 新增站点：与卡片同尺寸的虚线格 */
+/* 编辑态：行尾露出编辑/删除 */
+.site-tools {
+  display: none;
+  flex: none;
+  margin-left: auto;
+  gap: 2px;
+}
+.edit-mode .site-tools { display: flex; }
+.edit-mode .site-link { cursor: default; }
+.edit-mode .site-link:hover { text-decoration: none; }
+
+/* 新增站点：与链接行同高的虚线格 */
 .site-add {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--space-8);
-  min-height: 125px;
+  gap: 4px;
+  min-height: 30px;
+  padding: 6px 8px;
   font: inherit;
   font-size: 12px;
   color: var(--color-brand);
-  background: rgba(255, 255, 255, .40);
+  background: rgba(255, 255, 255, .35);
   border: 1px dashed rgba(255, 255, 255, .9);
-  border-radius: var(--radius-l);
+  border-radius: var(--radius-s);
   cursor: pointer;
 }
-.site-add:hover { background: rgba(255, 255, 255, .68); }
-.site-add svg { width: 18px; height: 18px; }
-
-/* 编辑态：卡右上角换成改名/删除 */
-.site-tools {
-  position: absolute;
-  top: var(--space-10);
-  right: var(--space-10);
-  display: none;
-  gap: var(--space-6);
-}
-.edit-mode .site-tools { display: flex; }
-.edit-mode .site-go { display: none; }
-.edit-mode .site-card { cursor: default; }
-.edit-mode .site-card:hover { transform: none; }
+.site-add:hover { background: rgba(255, 255, 255, .62); }
+.site-add svg { width: 14px; height: 14px; }
 
 .icon-btn {
   display: flex;
@@ -609,11 +590,8 @@ body {
 a:focus-visible,
 button:focus-visible,
 input:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
-.site-card:focus-within,
-.site-card:focus-visible {
-  border-color: rgba(255, 255, 255, 1);
-  box-shadow: var(--glass-inset), 0 20px 44px rgba(10, 22, 40, .12);
-}
+/* 行式链接的焦点态：给个底色，比只有描边更容易看出选中了哪一条 */
+.site-link:focus-visible { background: rgba(255, 255, 255, .70); }
 .sr-only {
   position: absolute;
   width: 1px; height: 1px;
@@ -627,7 +605,7 @@ input:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px
 /* ---------- 10. 响应式（§7 / R-7.1 / R-7.2） ---------- */
 @media (max-width: 1439px) {
   :root { --page-x: 64px; --hero-x: 16px; }
-  .sites { grid-template-columns: repeat(4, 1fr); }   /* §7 热门卡 4 列 */
+  .sites { grid-template-columns: repeat(5, minmax(0, 1fr)); }   /* 行式链接更窄，5 列 */
 }
 @media (max-width: 1023px) {
   /* R-7.1 窄屏降玻璃开销 */
@@ -637,12 +615,12 @@ input:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px
     --glass-card-blur: 16px;
     --glass-panel-blur: 24px;
   }
-  .sites { grid-template-columns: repeat(3, 1fr); }   /* §7 热门卡 3 列 */
+  .sites { grid-template-columns: repeat(4, minmax(0, 1fr)); }   /* 4 列 */
   .search-box { width: 100%; }
 }
 @media (max-width: 767px) {
   :root { --page-x: 20px; --hero-x: 0px; }
-  .sites { grid-template-columns: repeat(2, 1fr); }   /* §7 热门卡 2 列 */
+  .sites { grid-template-columns: repeat(2, minmax(0, 1fr)); }   /* 2 列 */
   .brand-name { font-size: 18px; }
   .catnav { gap: var(--space-8) var(--space-16); }
   .content { padding-top: var(--space-16); }

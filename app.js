@@ -107,15 +107,16 @@
     });
   }
 
-  /* ---------- 渲染：站点卡（§4.6） ---------- */
-  function siteCard(cat, link) {
+  /* ---------- 渲染：站点链接（紧凑行式） ---------- */
+  function siteLink(cat, link) {
     var a = document.createElement('a');
-    a.className = 'glass-card site-card';
+    a.className = 'site-link';
     a.style.setProperty('--cat', 'var(--cat-' + (cat.color || 1) + ')');
     a.href = link.url;
     a.target = '_blank';
     a.rel = 'noopener';
-    a.title = link.name + ' · ' + link.url;
+    // 描述不再占一行，放进悬停提示
+    a.title = link.desc ? (link.name + ' · ' + link.desc) : (link.name + ' · ' + hostOf(link.url));
 
     var mark = document.createElement('span');
     mark.className = 'site-mark';
@@ -143,16 +144,6 @@
     name.className = 'site-name';
     name.textContent = link.name;
     a.appendChild(name);
-
-    var desc = document.createElement('span');
-    desc.className = 'site-desc';
-    desc.textContent = link.desc || hostOf(link.url); // 没描述就退而显示域名，不留空白
-    a.appendChild(desc);
-
-    var go = document.createElement('span');
-    go.className = 'site-go';
-    go.innerHTML = ICON.go;
-    a.appendChild(go);
 
     var tools = document.createElement('span');
     tools.className = 'site-tools';
@@ -214,7 +205,7 @@
 
     var grid = document.createElement('div');
     grid.className = 'sites';
-    links.forEach(function (l) { grid.appendChild(siteCard(cat, l)); });
+    links.forEach(function (l) { grid.appendChild(siteLink(cat, l)); });
 
     if (state.editing && cat.id === state.selectedId && !state.query) {
       var add = document.createElement('button');
