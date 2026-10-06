@@ -1,12 +1,12 @@
 /**
  * 本地开发服务器（只用于本地预览，不部署）
  *
- * 关键点：它不重写业务逻辑，而是直接 import 生产要跑的那两个边缘函数
+ * 关键点：它不重写业务逻辑，而是直接 import 生产要跑的边缘函数
  *       ./functions/api/data.js 和 ./functions/api/icon.js，只给它们一个
  *       "文件版 KV"，所以本地点过的每一个按钮，走的就是上线后的同一份代码。
  *
  * 用法：node dev-server.mjs   然后打开 http://127.0.0.1:8788
- * 口令：默认 qihang，可用环境变量 NAV_PASSWORD 覆盖
+ * 初始化：admin，可用 NAV_ADMIN_PASSWORD 设置初始密码，兼容旧 NAV_PASSWORD
  * 数据：落在同目录的 data.local.json（可直接删掉重置）
  */
 
@@ -16,12 +16,14 @@ import { existsSync } from 'node:fs';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { onRequestGet as dataGet, onRequestPost as dataPost } from './functions/api/data.js';
+import { onRequest as dataHandler } from './functions/api/data.js';
+import { onRequest as sessionHandler } from './functions/api/session.js';
+import { onRequest as accountsHandler } from './functions/api/accounts.js';
 import { onRequest as iconHandler } from './functions/api/icon.js';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
 const PORT = Number(process.env.PORT || 8788);
-const PASSWORD = process.env.NAV_PASSWORD || 'qihang';
+const PASSWORD = process.env.NAV_ADMIN_PASSWORD || process.env.NAV_PASSWORD || 'qihang';
 const DATA_FILE = join(ROOT, 'data.local.json');
 
 /* ---------- 文件版 KV：实现边缘函数用到的 get / put / delete ----------
@@ -92,6 +94,8 @@ function readBody(req) {
 async function pipe(out, res) {
   const buf = Buffer.from(await out.arrayBuffer());
   const headers = Object.fromEntries(out.headers);
+  const cookies = out.headers.getSetCookie();
+  if (cookies.length) headers['set-cookie'] = cookies;
   headers['content-length'] = buf.length;
   res.writeHead(out.status, headers);
   res.end(buf);
@@ -106,14 +110,15 @@ const server = createServer(async (req, res) => {
     headers: req.headers,
     body: req.method === 'GET' || req.method === 'HEAD' ? undefined : raw
   });
-  const env = { NAV_KV: fileKV, NAV_PASSWORD: PASSWORD };
+  const env = { NAV_KV: fileKV, NAV_ADMIN_PASSWORD: PASSWORD };
 
-  /* ---------- API：交给生产用的那两份边缘函数处理 ---------- */
+  /* ---------- API：交给生产用的边缘函数处理 ---------- */
   try {
     if (url.pathname === '/api/data') {
-      const handler = req.method === 'POST' ? dataPost : dataGet;
-      return pipe(await handler({ request: makeRequest(), env }), res);
+      return pipe(await dataHandler({ request: makeRequest(), env }), res);
     }
+    if (url.pathname === '/api/session') return pipe(await sessionHandler({ request: makeRequest(), env }), res);
+    if (url.pathname === '/api/accounts') return pipe(await accountsHandler({ request: makeRequest(), env }), res);
     if (url.pathname === '/api/icon') {
       return pipe(await iconHandler({ request: makeRequest(), env }), res);
     }
@@ -126,7 +131,8 @@ const server = createServer(async (req, res) => {
   /* ---------- 静态文件 ---------- */
   const path = url.pathname === '/' ? '/index.html' : url.pathname;
   const target = normalize(join(ROOT, path));
-  if (!target.startsWith(ROOT) || !existsSync(target)) {
+  if (!target.startsWith(ROOT) || !existsSync(target)
+    || /(?:^|[\\/])(?:\.[^\\/]*|data\.local\.json|tmp-import|functions)(?:[\\/]|$)/.test(target.slice(ROOT.length))) {
     res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
     res.end('404');
     return;
@@ -143,7 +149,7 @@ server.listen(PORT, '127.0.0.1', () => {
   console.log('  启航导航 · 本地预览已启动');
   console.log('  ────────────────────────────────────────');
   console.log(`  地址：http://127.0.0.1:${PORT}`);
-  console.log(`  口令：${PASSWORD}`);
+  console.log('  初始账号：admin（密码来自 NAV_ADMIN_PASSWORD / NAV_PASSWORD；本地默认 qihang）');
   console.log(`  数据：${DATA_FILE}`);
   console.log('  停止：Ctrl+C');
   console.log('');

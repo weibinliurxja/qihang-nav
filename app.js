@@ -11,7 +11,8 @@
 
   var API = '/api/data';
   var ICON_API = '/api/icon';
-  var PWD_KEY = 'nav-password';
+  var SESSION_API = '/api/session';
+  var ACCOUNTS_API = '/api/accounts';
   var HASH_PREFIX = '#/c/';
   var PALETTE_SIZE = 8;      // CSS 里的 --cat-1 .. --cat-8（R-1.10）
   var MAX_ICON_BYTES = 512 * 1024;
@@ -27,6 +28,12 @@
   /* ---------- DOM ---------- */
   var $ = function (id) { return document.getElementById(id); };
   var elGate = $('gate'), elPage = $('page'), elGrid = $('grid'), elEmpty = $('empty'), elCatnav = $('catnav');
+  var elGateUsername = $('gate-username');
+  var elAccountName = $('account-name'), elManageAccounts = $('manage-accounts');
+  var elAccountsModal = $('accounts-modal'), elAccountsList = $('accounts-list');
+  var elAccountForm = $('account-form'), elAccountsMessage = $('accounts-message');
+  var elResetForm = $('reset-password-form'), resetUsername = null;
+  var accountBusy = false;
   var elGateForm = $('gate-form'), elGatePwd = $('gate-pwd'), elGateErr = $('gate-err'), elGateSubmit = $('gate-submit');
   var elQ = $('q'), elSearchBox = $('search-box'), elQClear = $('q-clear');
   var elEditToggle = $('edit-toggle'), elEditLabel = $('edit-label'), elLogout = $('logout');
@@ -41,7 +48,7 @@
 
   /* ---------- 状态 ---------- */
   var state = {
-    password: '',
+    user: null,
     data: { version: 1, categories: [] },
     editing: false,
     dirty: false,
@@ -82,7 +89,7 @@
 
   /* ---------- 接口 ---------- */
   function api(method, body) {
-    var headers = { 'X-Password': state.password };
+    var headers = {};
     if (body) headers['Content-Type'] = 'application/json';
     return fetch(API, { method: method, headers: headers, body: body ? JSON.stringify(body) : undefined })
       .then(function (res) {
@@ -360,7 +367,7 @@
   function applyIconChange(id) {
     if (!linkTarget.pendingIcon && !linkTarget.clearIcon) return Promise.resolve(null);
     var url = ICON_API + '?id=' + encodeURIComponent(id);
-    var opts = { headers: { 'X-Password': state.password } };
+    var opts = { headers: {} };
     if (linkTarget.pendingIcon) {
       var f = linkTarget.pendingIcon;
       if (f.size > MAX_ICON_BYTES) return Promise.resolve('图片太大（上限 512 KB）');
@@ -371,7 +378,7 @@
       opts.method = 'DELETE';
     }
     return fetch(url, opts).then(function (r) {
-      if (r.status === 401) return '口令失效，请重新登录';
+      if (r.status === 401) return '登录已失效，请重新登录';
       if (!r.ok) return r.json().catch(function () { return {}; })
         .then(function (j) { return '图标上传失败：' + (j.error || r.status); });
       iconVer[id] = Date.now(); // 让浏览器重新拉这张图
@@ -411,7 +418,7 @@
     elGateErr.hidden = !message;
     if (message) elGateErr.textContent = message;
     elGatePwd.value = '';
-    elGatePwd.focus();
+    elGateUsername.focus();
   }
 
   function applyData(data) {
@@ -426,49 +433,151 @@
     render();
   }
 
-  function loadData() {
-    api('GET').then(function (r) {
-      if (r.status === 401) { localStorage.removeItem(PWD_KEY); showGate('口令不对，或被改过了'); return; }
-      if (!r.ok || !r.json || !r.json.data) { showGate('读取数据失败（' + r.status + '）'); return; }
-      applyData(r.json.data);
-    }).catch(function () {
-      showGate('连不上服务，检查本地服务是否在运行');
+  function requestJson(url, method, body) {
+    return fetch(url, { method: method, credentials: 'same-origin',
+      headers: body ? { 'Content-Type': 'application/json' } : {},
+      body: body ? JSON.stringify(body) : undefined
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) {
+        return { status: r.status, ok: r.ok, json: j };
+      });
     });
   }
 
-  /* ---------- 事件绑定 ---------- */
+  function closeAccountsModal() {
+    elAccountsModal.classList.remove('is-open');
+    elAccountForm.reset(); elResetForm.reset(); elResetForm.hidden = true;
+    resetUsername = null;
+  }
+
+  function clearAccountState() {
+    state.user = null;
+    state.data = { version: 1, categories: [] };
+    state.editing = false; state.selectedId = null; state.query = '';
+    iconVer = {};
+    elQ.value = ''; elSearchBox.classList.remove('has-value');
+    elAccountName.textContent = ''; elManageAccounts.hidden = true;
+    elCatnav.textContent = ''; elGrid.textContent = '';
+    elEditToggle.setAttribute('aria-pressed', 'false'); elEditLabel.textContent = '编辑';
+    document.body.classList.remove('edit-mode');
+    closeLinkModal(); closeCatModal(); closeAccountsModal();
+    elAccountsList.textContent = '';
+    elSave.disabled = false; elSave.textContent = '保存';
+    setDirty(false);
+  }
+
+  function expired(message) { clearAccountState(); showGate(message || '登录已失效，请重新登录'); }
+
+  function loadData() {
+    var owner = state.user;
+    return api('GET').then(function (r) {
+      if (owner !== state.user) return;
+      if (r.status === 401) { expired(); return; }
+      if (!r.ok || !r.json || !r.json.data) throw new Error('读取数据失败（' + r.status + '）');
+      applyData(r.json.data);
+      elGate.hidden = true; elPage.hidden = false;
+    });
+  }
+
+  function enterAccount(user) {
+    clearAccountState();
+    state.user = user;
+    elAccountName.textContent = user.username;
+    elManageAccounts.hidden = user.role !== 'admin';
+    // Clear the previous account's category from the address bar.
+    history.replaceState(null, '', location.pathname + location.search);
+    return loadData();
+  }
+
   elGateForm.addEventListener('submit', function (e) {
     e.preventDefault();
-    var pwd = elGatePwd.value;
-    if (!pwd) return;
     elGateSubmit.disabled = true;
-    state.password = pwd;
-    api('GET').then(function (r) {
-      elGateSubmit.disabled = false;
-      if (r.status === 401) { showGate('口令不对'); return; }
-      if (!r.ok || !r.json || !r.json.data) { showGate('读取数据失败（' + r.status + '）'); return; }
-      localStorage.setItem(PWD_KEY, pwd);
-      elGate.hidden = true;
-      elPage.hidden = false;
-      applyData(r.json.data);
-    }).catch(function () {
-      elGateSubmit.disabled = false;
-      showGate('连不上服务');
-    });
+    requestJson(SESSION_API, 'POST', { username: elGateUsername.value.trim(), password: elGatePwd.value })
+      .then(function (r) {
+        elGatePwd.value = '';
+        if (!r.ok) { showGate(r.json.error || '登录失败'); return; }
+        return enterAccount(r.json.user);
+      }).catch(function (err) { expired(err.message || '连不上服务'); })
+      .finally(function () { elGateSubmit.disabled = false; });
   });
 
   elLogout.addEventListener('click', function () {
-    localStorage.removeItem(PWD_KEY);
-    state.password = '';
-    state.data = { version: 1, categories: [] };
-    state.editing = false;
-    state.selectedId = null;
-    elEditToggle.setAttribute('aria-pressed', 'false');
-    elEditLabel.textContent = '编辑';
-    document.body.classList.remove('edit-mode');
-    setDirty(false);
-    showGate('');
+    elLogout.disabled = true;
+    requestJson(SESSION_API, 'DELETE').then(function (r) {
+      if (!r.ok) throw new Error('退出失败，请重试');
+      history.replaceState(null, '', location.pathname + location.search);
+      expired(''); elGateErr.hidden = true;
+    }).catch(function (err) { window.alert(err.message || '退出失败，请检查网络后重试'); })
+      .finally(function () { elLogout.disabled = false; });
   });
+
+  function renderAccounts(users) {
+    elAccountsList.textContent = '';
+    users.forEach(function (user) {
+      var row = document.createElement('div'); row.className = 'account-row';
+      var name = document.createElement('span'); name.className = 'account-row-name';
+      name.textContent = user.username + (user.role === 'admin' ? ' · 管理员' : '') + (user.disabled ? ' · 已停用' : '');
+      row.appendChild(name);
+      var reset = document.createElement('button'); reset.type = 'button'; reset.className = 'btn-ghost';
+      reset.textContent = '重置密码';
+      reset.addEventListener('click', function () {
+        if (accountBusy) return;
+        resetUsername = user.username; elResetForm.hidden = false;
+        $('reset-password-title').textContent = '重置 ' + user.username + ' 的密码';
+        $('reset-password').value = ''; $('reset-password').focus();
+      });
+      row.appendChild(reset);
+      if (user.role !== 'admin') {
+        var toggle = document.createElement('button'); toggle.type = 'button'; toggle.className = 'btn-ghost';
+        toggle.textContent = user.disabled ? '启用' : '停用';
+        toggle.addEventListener('click', function () {
+          if (accountBusy) return;
+          mutateAccounts('PATCH', { username: user.username, action: 'status', disabled: !user.disabled });
+        });
+        row.appendChild(toggle);
+      }
+      elAccountsList.appendChild(row);
+    });
+  }
+
+  function mutateAccounts(method, body) {
+    var owner = state.user;
+    if (accountBusy) return;
+    accountBusy = true;
+    elAccountsMessage.textContent = '正在保存…';
+    Array.prototype.forEach.call(elAccountsModal.querySelectorAll('button'), function (b) { b.disabled = true; });
+    requestJson(ACCOUNTS_API, method, body).then(function (r) {
+      if (owner !== state.user) return;
+      if (r.status === 401) { expired(); return; }
+      if (!r.ok) { elAccountsMessage.textContent = r.json.error || '操作失败'; return; }
+      if (r.json.reauthenticate) { expired('密码已更新，请重新登录'); return; }
+      renderAccounts(r.json.users); elAccountForm.reset(); elResetForm.reset(); elResetForm.hidden = true;
+      elAccountsMessage.textContent = '已保存';
+    }).catch(function () { elAccountsMessage.textContent = '操作失败：连不上服务'; })
+      .finally(function () {
+        accountBusy = false;
+        Array.prototype.forEach.call(elAccountsModal.querySelectorAll('button'), function (b) { b.disabled = false; });
+      });
+  }
+
+  elManageAccounts.addEventListener('click', function () {
+    elAccountsMessage.textContent = '正在读取账号…'; elAccountsList.textContent = '';
+    elAccountsModal.classList.add('is-open');
+    requestJson(ACCOUNTS_API, 'GET').then(function (r) {
+      if (r.status === 401) { expired(); return; }
+      if (!r.ok) { elAccountsMessage.textContent = r.json.error || '读取失败'; return; }
+      renderAccounts(r.json.users); elAccountsMessage.textContent = '';
+    }).catch(function () { elAccountsMessage.textContent = '读取失败：连不上服务'; });
+  });
+  elAccountForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    mutateAccounts('POST', { username: $('new-username').value.trim(), password: $('new-password').value });
+  });
+  elResetForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    mutateAccounts('PATCH', { username: resetUsername, action: 'password', password: $('reset-password').value });
+  });
+  $('cancel-reset').addEventListener('click', function () { elResetForm.hidden = true; elResetForm.reset(); resetUsername = null; });
 
   elEditToggle.addEventListener('click', function () {
     state.editing = !state.editing;
@@ -528,9 +637,11 @@
     var cat = catById(linkTarget.catId);
     if (!cat) return;
     var target = linkTarget;
+    var owner = state.user;
     var id = target.mode === 'add' ? target.id : target.linkId;
 
     applyIconChange(id).then(function (err) {
+      if (owner !== state.user || target !== linkTarget) return;
       if (err) { elIconHint.textContent = err; return; } // 图标失败就不关弹窗
       if (target.mode === 'add') {
         cat.links.push({ id: id, name: elLnName.value.trim(), url: url, desc: elLnDesc.value.trim() });
@@ -565,43 +676,45 @@
   });
 
   Array.prototype.forEach.call(document.querySelectorAll('[data-close]'), function (btn) {
-    btn.addEventListener('click', function () { closeLinkModal(); closeCatModal(); });
+    btn.addEventListener('click', function () { closeLinkModal(); closeCatModal(); closeAccountsModal(); });
   });
-  [elLinkModal, elCatModal].forEach(function (m) {
+  [elLinkModal, elCatModal, elAccountsModal].forEach(function (m) {
     m.addEventListener('click', function (e) {
-      if (e.target === m) { closeLinkModal(); closeCatModal(); }
+      if (e.target === m) { closeLinkModal(); closeCatModal(); closeAccountsModal(); }
     });
   });
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') { closeLinkModal(); closeCatModal(); }
+    if (e.key === 'Escape') { closeLinkModal(); closeCatModal(); closeAccountsModal(); }
   });
 
   elSave.addEventListener('click', function () {
+    var owner = state.user;
     elSave.disabled = true;
     elSave.textContent = '保存中';
     api('POST', state.data).then(function (r) {
+      if (owner !== state.user) return;
       elSave.disabled = false;
       elSave.textContent = '保存';
-      if (r.status === 401) { showGate('口令失效，请重新输入'); return; }
+      if (r.status === 401) { expired(); return; }
       if (!r.ok) { elSavebarText.textContent = '保存失败（' + r.status + '）'; return; }
       setDirty(false);
     }).catch(function () {
       elSave.disabled = false;
       elSave.textContent = '保存';
-      elSavebarText.textContent = '保存失败：连不上服务';
+      if (owner === state.user) elSavebarText.textContent = '保存失败：连不上服务';
     });
   });
 
-  elDiscard.addEventListener('click', function () { loadData(); });
+  elDiscard.addEventListener('click', function () { loadData().catch(function (err) { elSavebarText.textContent = err.message; }); });
 
   /* ---------- 启动 ---------- */
-  var saved = localStorage.getItem(PWD_KEY);
-  if (saved) {
-    state.password = saved;
-    elGate.hidden = true;
-    elPage.hidden = false;
-    loadData();
-  } else {
-    showGate('');
-  }
+  // Remove the legacy plaintext passphrase; authentication now lives in an HttpOnly cookie.
+  try { localStorage.removeItem('nav-password'); } catch (e) {}
+  requestJson(SESSION_API, 'GET').then(function (r) {
+    if (!r.ok) { showGate(''); return; }
+    state.user = r.json.user;
+    elAccountName.textContent = state.user.username;
+    elManageAccounts.hidden = state.user.role !== 'admin';
+    return loadData();
+  }).catch(function (err) { expired(err.message || '连不上服务'); });
 })();

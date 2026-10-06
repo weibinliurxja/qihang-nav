@@ -638,3 +638,19 @@ input:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
 }
+
+/* Account controls use the existing surface and spacing tokens. */
+.gate-input + .gate-input { margin-top: var(--space-10); }
+.account-name { font-size: 12px; color: var(--color-ink-3); overflow-wrap: anywhere; }
+.brand-actions { flex-wrap: wrap; justify-content: flex-end; }
+.account-panel { max-width: 560px; max-height: 85vh; overflow-y: auto; }
+.accounts-list { margin-top: var(--space-16); }
+.account-row { display: flex; flex-wrap: wrap; gap: var(--space-8); align-items: center; padding: var(--space-8) 0; }
+.account-row-name { flex: 1; min-width: 120px; overflow-wrap: anywhere; color: var(--color-ink); }
+.account-row .btn-ghost { font-size: 12px; padding: var(--space-6) var(--space-8); }
+.account-form-title { font-size: 14px; color: var(--color-ink); margin: var(--space-16) 0 var(--space-8); }
+@media (max-width: 767px) {
+  .brand-row { flex-wrap: wrap; }
+  .brand-actions { width: 100%; margin-left: 0; }
+  .account-name { margin-right: auto; }
+}

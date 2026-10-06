@@ -1,74 +1,76 @@
 # 启航导航
 
-个人自用的网址导航起始页。纯静态三文件 + 两个 Cloudflare Pages Functions，没有构建、没有依赖。
+带独立账号配置的个人网址导航起始页。原生 HTML/CSS/JavaScript + Cloudflare Pages Functions + KV，无第三方运行依赖和构建步骤。
 
-**线上地址**：https://qihang-nav.pages.dev
+## 登录与账号管理
 
-## 组成
+- 使用账号和密码登录，账号不区分大小写。当前账号显示在页面头部。
+- `admin` 是管理员，可以创建普通账号、重置任意账号密码、启用或停用普通账号。管理员不能被停用。
+- 不开放自行注册；新账号从空配置开始。分类、站点、识别色和图标分别归属各自账号。
+- 停用保留原配置，重新启用后可继续使用。重置密码、停用和重新启用会使该账号旧会话失效；重置自己的密码后需重新登录。
+- 浏览器通过 HttpOnly 会话 Cookie 保持登录（7 天），不再存储明文密码。退出会清除浏览器会话。
+- 账号须为 3–32 位字母、数字、下划线或短横线，以字母或数字开头；新建和重置的密码须为 8–128 个字符。
+
+## 从原口令版本升级
+
+继续使用原 KV 绑定 `NAV_KV`，保留旧环境变量 `NAV_PASSWORD` 即可部署，无需手工导出或清空 KV。
+
+首次登录使用 **账号 `admin` + 原访问口令**。若配置 `NAV_ADMIN_PASSWORD`，它会优先作为 admin 的初始化密码。账号表仅在首次登录时初始化；之后改环境变量不会覆盖已经保存的密码，请在账号管理页面重置。
+
+admin 第一次读取配置时，会将旧 `nav:data` 复制到自己的存储空间。原数据保留，旧图标按需复制且只属于 admin。其他账号无法读取旧配置或图标。升级后旧口令请求头与旧认证 Cookie 均不再授权访问接口，所有使用者需要重新登录。
+
+## 项目组成
 
 | 文件 | 说明 |
 |---|---|
-| `index.html` | 单页，图标全部内联 SVG |
-| `style.css` | 设计令牌 + 玻璃三档配方 + 四档响应式 |
-| `app.js` | 渲染 / 搜索 / 编辑，经典脚本（非 module） |
-| `functions/api/data.js` | 数据读写：口令校验 + KV 整份文档读写 |
-| `functions/api/icon.js` | 站点图标：服务端抓取 + KV 缓存 + 手动上传 |
-| `dev-server.mjs` | **本地预览用，不部署**。直接 import 上面两个函数，只把 KV 换成文件 |
-| `docs/` | 开发规范、ADR、术语表、调研记录 |
+| `index.html` | 单页、登录表单、编辑及账号管理弹窗 |
+| `style.css` | 设计令牌、玻璃配方、响应式布局 |
+| `app.js` | 会话恢复、渲染、搜索、编辑、管理员操作 |
+| `functions/_lib/auth.js` | 共用认证、账号校验、会话签名、存储空间选择 |
+| `functions/api/session.js` | 登录、当前会话、退出 |
+| `functions/api/accounts.js` | 管理员创建账号、重置密码和启停账号 |
+| `functions/api/data.js` | 当前账号的配置读取和整份保存 |
+| `functions/api/icon.js` | 当前账号的图标抓取、缓存及上传 |
+| `dev-server.mjs` | 本地预览，直接调用生产函数并用文件模拟 KV |
+| `tests/accounts.test.mjs` | 认证、权限隔离、迁移和账号生命周期测试 |
 
-## 本地预览
+## 本地预览和测试
+
+建议使用 Node.js 24：
 
 ```bash
-node dev-server.mjs      # 打开 http://127.0.0.1:8788，默认口令 qihang
+npm run dev
+# http://127.0.0.1:8788
+# 全新本地数据的初始账号：admin，默认初始密码：qihang
+npm test
+# 若本机只有 Node，也可直接运行：
+node --test --test-isolation=none tests/accounts.test.mjs
 ```
 
-`dev-server.mjs` 会把 KV 注入成全局变量 `NAV_KV`（模拟 EdgeOne 的注入方式），并同时保留
-`env.NAV_KV`（Cloudflare 的方式），所以两种运行时的代码路径本地都能跑到。
-数据落在 `data.local.json`，删掉即重置。
+可以通过进程环境变量 `NAV_ADMIN_PASSWORD` 设置初始化密码，也兼容 `NAV_PASSWORD`。开发服务器不会自动加载 `.env`；若需要加载，运行 `node --env-file=.env dev-server.mjs`。
 
-## 部署（Cloudflare Pages）
+本地数据保存在被 Git 忽略的 `data.local.json`。删除此文件会重置所有本地账号及配置。开发服务器禁止静态访问本地数据、隐藏文件、函数源文件和导入目录。
 
-已经配好了，日常只需要 `git push`，Cloudflare 会自动构建部署。
+## 部署到 Cloudflare Pages
 
-关键配置留档，重建项目时照填：
+仓库当前记录的线上地址：https://qihang-nav.pages.dev
 
-| 位置 | 项 | 值 |
-|---|---|---|
-| 构建设置 | 框架预设 | 无 |
-| 构建设置 | 构建命令 | `exit 0` |
-| 构建设置 | 构建输出目录 | `/` |
-| 变量和密钥 | `NAV_PASSWORD` | 访问口令 |
-| 绑定 | KV 命名空间，变量名 | `NAV_KV` |
+| 配置 | 值 |
+|---|---|
+| 框架预设 | 无 |
+| 构建命令 | `exit 0` |
+| 构建输出目录 | `/` |
+| KV 绑定 | `NAV_KV` |
+| 初始化密码密钥 | `NAV_ADMIN_PASSWORD`，兼容原 `NAV_PASSWORD` |
 
-## 三个容易踩的坑（已处理，改动时别踩回去）
+已有自动部署配置时，推送代码会触发部署。新建项目需使用 Pages 工作流，函数目录保持 `functions/`。
 
-1. **KV 的取法**：EdgeOne 把 KV 注入成**以绑定名为名字的全局变量**（`NAV_KV.get(...)`），
-   Cloudflare 则走 `env.NAV_KV`。代码里用 `kvOf(context)` 兼容两者，别改成单一写法。
-2. **函数目录必须是 `functions/`**。官方 EdgeOne 模板实测用的是 `functions/`；
-   Cloudflare Pages 也是同一约定。不要改成 `edge-functions/` 或 `node-functions/`。
-3. **Cloudflare 新版控制台默认走 Workers 流程**，那条路不认 `functions/` 目录。
-   创建项目时要走「需要使用旧版 Pages 工作流？继续前往 Pages」那个入口。
+## 存储与行为边界
 
-## 站点的运维小事
+账号表为 `auth:users`，只存带随机盐的 PBKDF2 密码摘要和会话签名密钥，不存明文密码。配置键为 `user:<accountId>:data`，图标键为 `user:<accountId>:icon:<linkId>`。服务端根据已认证账号选择空间，客户端不能指定其他账号的数据空间。管理员管理账号凭据，界面不提供查看其他账号配置的功能。
 
-- **图标抓不到怎么办**：部分站点（如 bilibili）会拦截机房 IP，图标会退回「识别色方块 + 首字」。
-  在编辑模式里给那个站点手动传一张图即可，手动图标优先级最高且不会被自动抓取覆盖。
-- **改口令**：Cloudflare 项目 → 设置 → 变量和密钥 → 改 `NAV_PASSWORD` → 重新部署。
-  本地 `.env` 里的也要同步改。
+配置保持整份保存，同一账号多设备同时编辑仍是后保存者覆盖先保存者；不同账号使用不同键。账号管理也使用整份账号表，请避免多个管理员页面同时修改。KV 是最终一致存储，跨节点读取配置、账号停用和密码重置可能有传播延迟，不能保证即时全局撤销。
 
-## 私密性
+图标在站点弹窗点击“确定”时立即写入；配置栏的“放弃”只恢复分类和站点字段，不撤销图标操作。图标响应使用 `private, no-store`，避免切换账号时浏览器复用其他账号图标。
 
-**书签数据从不公开。** 具体来说：
-
-- `/api/data`（书签本体）任何时候都要口令，无口令/错口令一律 401。
-- `/api/icon`（站点图标）**也**要认证 —— 图标本身是公开的，但「你收藏了哪些站点」不是。
-  它用的是口令校验后种下的 HttpOnly Cookie，因为 `<img>` 标签发不出自定义请求头。
-- 静态外壳（`index.html` / `style.css` / `app.js`）里不含任何书签数据，公开也无所谓。
-- `data.local.json` 与 `.env` 都被 `.gitignore` 挡住，从未进过仓库。
-
-唯一的暴露面是：**仓库里的文件会被当作静态资源提供**（`README.md`、`docs/`、`package.json` 等）。
-这些文件里没有书签，但如果你想连它们也不公开，把 `index.html`/`style.css`/`app.js` 移进
-`public/` 目录、并把 Cloudflare 的「构建输出目录」改成 `public` 即可——`functions/` 仍留在仓库根。
-
-> 若想连静态外壳一起藏起来（也就是整站私有），可以用 Cloudflare Access（免费额度 50 用户以内，
-> 邮箱验证码登录），那是平台层的门，比页面里的口令更靠前。
+静态外壳不含个人配置。仓库根仍作为静态输出目录，README、docs 和测试等文件可能公开；`.env`、本地数据和导入源文件必须保持不提交。

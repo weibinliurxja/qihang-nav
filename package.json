@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "启航导航 · 个人网址导航（纯静态 + EdgeOne Pages 边缘函数 + KV）",
+  "description": "启航导航 · 多账号网址导航（纯静态 + Cloudflare Pages Functions + KV）",
   "scripts": {
-    "dev": "node dev-server.mjs"
+    "dev": "node dev-server.mjs",
+    "test": "node --test --test-isolation=none tests/*.test.mjs"
   }
 }
