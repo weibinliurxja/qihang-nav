@@ -602,6 +602,8 @@ body {
 a:focus-visible,
 button:focus-visible,
 input:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
+/* 搜索框通过外层圆角容器的 :focus-within 显示焦点。 */
+.search-box input:focus-visible { outline: none; }
 /* 行式链接的焦点态：给个底色，比只有描边更容易看出选中了哪一条 */
 .site-link:focus-visible { background: rgba(255, 255, 255, .70); }
 .sr-only {
